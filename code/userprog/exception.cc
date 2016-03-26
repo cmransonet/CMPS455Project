@@ -107,6 +107,10 @@ ExceptionHandler(ExceptionType which)
 	int i, j;
 	char *ch = new char [500];
 
+	// Begin code changes by Chet Ransonet
+	int invalidPage;
+	// End code changes by Chet Ransonet
+
 	switch ( which )
 	{
 	case NoException :
@@ -323,8 +327,17 @@ ExceptionHandler(ExceptionType which)
 			delete currentThread->space;
 		currentThread->Finish();	// Delete the thread.
 		break;
+		
+	// Begin code changes by Chet Ransonet
+	case PageFaultException :
+		printf("PFEtest\n");
+		invalidPage = machine->ReadRegister(BadVAddrReg);
+		currentThread->space->loadPage(invalidPage);
+		break;	
+		
+	// End code changes by Chet Ransonet
 
-		default :
+	default :
 		//      printf("Unexpected user mode exception %d %d\n", which, type);
 		//      if (currentThread->getName() == "main")
 		//      ASSERT(FALSE);

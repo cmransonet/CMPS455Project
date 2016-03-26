@@ -18,7 +18,7 @@
 #include "copyright.h"
 #include "system.h"
 #include "addrspace.h"
-#include "noff.h"
+//#include "noff.h"
 
 //----------------------------------------------------------------------
 // SwapHeader
@@ -59,10 +59,14 @@ SwapHeader (NoffHeader *noffH)
 
 AddrSpace::AddrSpace(OpenFile *executable)
 {
-    NoffHeader noffH;
+	// Begin code changes by Chet Ransonet
+	file = executable;
+
+    //NoffHeader noffH;
+	// End code changes by Chet Ransonet
     unsigned int i, size, pAddr, counter;
 	space = false;
-
+	
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
     if ((noffH.noffMagic != NOFFMAGIC) && 
 		(WordToHost(noffH.noffMagic) == NOFFMAGIC))
@@ -73,7 +77,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
     size = noffH.code.size + noffH.initData.size + noffH.uninitData.size 
 			+ UserStackSize;	// we need to increase the size
 						// to leave room for the stack
-    numPages = divRoundUp(size, PageSize);
+    numPages = divRoundUp(size, PageSize); 
     size = numPages * PageSize;
 
 	//Change this to reference the bitmap for free pages
@@ -118,7 +122,9 @@ AddrSpace::AddrSpace(OpenFile *executable)
 		pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
 		//pageTable[i].physicalPage = i;	//Replace with pageTable[i].physicalPage = i + startPage;
 		pageTable[i].physicalPage = i + startPage;
-		pageTable[i].valid = TRUE;
+		// Begin code changes by Chet Ransonet
+		pageTable[i].valid = FALSE;//TRUE;
+		// End code changes by Chet Ransonet
 		pageTable[i].use = FALSE;
 		pageTable[i].dirty = FALSE;
 		pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
@@ -131,7 +137,9 @@ AddrSpace::AddrSpace(OpenFile *executable)
     }
 	
 	memMap->Print();	// Useful!
-    
+
+
+/* Don't load into physical memory yet!    
 // zero out the entire address space, to zero the unitialized data segment 
 // and the stack segment
 //    bzero(machine->mainMemory, size); rm for Solaris
@@ -158,8 +166,33 @@ AddrSpace::AddrSpace(OpenFile *executable)
         executable->ReadAt(&(machine->mainMemory[noffH.initData.virtualAddr + pAddr]),
 			noffH.initData.size, noffH.initData.inFileAddr);
     }
-
+*/
 }
+
+// Begin code changes by Chet Ransonet
+
+// called in the case of a PageFaultException
+// loads code and data into a free physical page if there is one
+void AddrSpace::loadPage(int page)
+{
+	unsigned int pAddr = pageTable[page].physicalPage * PageSize;
+	
+    memset(machine->mainMemory + page, 0, PageSize);
+    
+    // TODO: load memory into free physical page
+    /*
+    if (noffH.code.size > 0) 
+        file->ReadAt(&(machine->mainMemory[noffH.code.virtualAddr + pAddr]),
+			noffH.code.size, noffH.code.inFileAddr);
+
+    if (noffH.initData.size > 0)
+        file->ReadAt(&(machine->mainMemory[noffH.initData.virtualAddr + pAddr]),
+			noffH.initData.size, noffH.initData.inFileAddr);
+    */
+    //if (fileSystem->Create("testfile.swap", 200)) //creates a blank testfile.swap
+    	//printf("file created\n");
+}
+// End code changes by Chet Ransonet
 
 //----------------------------------------------------------------------
 // AddrSpace::~AddrSpace
