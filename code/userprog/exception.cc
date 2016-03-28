@@ -29,6 +29,8 @@
 #include "addrspace.h"   // FA98
 #include "sysdep.h"   // FA98
 
+Lock *memLock = NULL;
+
 // begin FA98
 
 static int SRead(int addr, int size, int id);
@@ -199,7 +201,7 @@ ExceptionHandler(ExceptionType which)
 				// Calculate needed memory space
 				AddrSpace *space;
 				space = new AddrSpace(executable);
-				delete executable;
+				//delete executable;
 				// Do we have enough space?
 				if(!currentThread->killNewChild)	// If so...
 				{
@@ -330,10 +332,15 @@ ExceptionHandler(ExceptionType which)
 		
 	// Begin code changes by Chet Ransonet
 	case PageFaultException :
-		printf("PFEtest\n");
+		printf("PageFaultException!\n");
+			
 		invalidPage = machine->ReadRegister(BadVAddrReg);
+		
+		printf("invalidPage = %i\n", invalidPage);
+		
 		currentThread->space->loadPage(invalidPage);
-		break;	
+		
+		return;	
 		
 	// End code changes by Chet Ransonet
 

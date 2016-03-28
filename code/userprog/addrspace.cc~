@@ -18,7 +18,7 @@
 #include "copyright.h"
 #include "system.h"
 #include "addrspace.h"
-//#include "noff.h"
+//#include "noff.h" //moved to addrspace.h - Chet
 
 //----------------------------------------------------------------------
 // SwapHeader
@@ -64,7 +64,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 
     //NoffHeader noffH;
 	// End code changes by Chet Ransonet
-    unsigned int i, size, pAddr, counter;
+    unsigned int i, size, /*pAddr,*/ counter;
 	space = false;
 	
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
@@ -133,10 +133,10 @@ AddrSpace::AddrSpace(OpenFile *executable)
 
 		//Take the global bitmap and set the relevant chunks
 		//to indicate that the memory is in use
-		memMap->Mark(i + startPage);
+		//memMap->Mark(i + startPage);
     }
 	
-	memMap->Print();	// Useful!
+	//memMap->Print();	// Useful!
 
 
 /* Don't load into physical memory yet!    
@@ -173,23 +173,45 @@ AddrSpace::AddrSpace(OpenFile *executable)
 
 // called in the case of a PageFaultException
 // loads code and data into a free physical page if there is one
-void AddrSpace::loadPage(int page)
+void AddrSpace::loadPage(int badVAddr)
 {
-	unsigned int pAddr = pageTable[page].physicalPage * PageSize;
+	int virtualPage = badVAddr / PageSize;
+	int offset = 0, pAddr;
+		
+	// for now, terminate nachos if out of memory
+	if(memMap->NumClear() < 1)
+	{	
+		printf("ERROR: Out of memory. AddrSpace::loadPage\n");
+		ASSERT(FALSE); // terminate nachos
+	}
 	
-    memset(machine->mainMemory + page, 0, PageSize);
-    
-    // TODO: load memory into free physical page
-    /*
-    if (noffH.code.size > 0) 
-        file->ReadAt(&(machine->mainMemory[noffH.code.virtualAddr + pAddr]),
-			noffH.code.size, noffH.code.inFileAddr);
+	pageTable[virtualPage].physicalPage = memMap->Find();
+	pageTable[virtualPage].valid = TRUE;
+	
+	memMap->Print();
+	
+	printf("virtualPage = %i\npageTable[virtualPage].physicalPage = %i\n", virtualPage, pageTable[virtualPage].physicalPage);
+	
+	pAddr = pageTable[virtualPage].physicalPage * PageSize;
+	
+    memset(machine->mainMemory + pAddr, 0, PageSize);
 
+    	
+    if (noffH.code.size > 0)
+    {
+        file->ReadAt(&(machine->mainMemory[pAddr]), PageSize, readOffset + 
+        	noffH.code.inFileAddr);
+	}
+	
     if (noffH.initData.size > 0)
-        file->ReadAt(&(machine->mainMemory[noffH.initData.virtualAddr + pAddr]),
-			noffH.initData.size, noffH.initData.inFileAddr);
-    */
-    //if (fileSystem->Create("testfile.swap", 200))
+    {
+        file->ReadAt(&(machine->mainMemory[pAddr]), PageSize, readOffset + 
+        	noffH.initData.inFileAddr);
+    }
+    
+    
+    
+    //if (fileSystem->Create("testfile.swap", 200)) //creates a blank testfile.swap
     	//printf("file created\n");
 }
 // End code changes by Chet Ransonet
@@ -208,13 +230,16 @@ AddrSpace::~AddrSpace()
 	// which in turn only happens after space is set to true
 	if(space)
 	{
-		for(int i = startPage; i < numPages + startPage; i++)	// We need an offset of startPage + numPages for clearing.
+		for(unsigned int i = startPage; i < numPages + startPage; i++)	// We need an offset of startPage + numPages for clearing.
 			memMap->Clear(i);
 
 		delete pageTable;
 
 		memMap->Print();
 	}
+	// Begin code changes by Chet Ransonet
+	delete file;
+	// End code changes by Chet Ransonet
 }
 
 //----------------------------------------------------------------------

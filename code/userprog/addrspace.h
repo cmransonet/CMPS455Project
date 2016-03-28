@@ -33,12 +33,13 @@ class AddrSpace {
     void RestoreState();		// info on a context switch 
     
     // Begin code changes by Chet Ransonet
-    void loadPage(int page);
+    void loadPage(int badVAddrReg);
     // End code changes by Chet Ransonet
 
   private:
   	// Begin code changes by Chet Ransonet
     OpenFile * file;
+    OpenFile * swapFile;
     NoffHeader noffH;
     // End code changes by Chet Ransonet
   
