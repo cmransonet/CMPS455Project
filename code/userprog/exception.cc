@@ -331,15 +331,10 @@ ExceptionHandler(ExceptionType which)
 		break;
 		
 	// Begin code changes by Chet Ransonet
-	case PageFaultException :
-		printf("PageFaultException!\n");
-			
+	case PageFaultException :			
 		invalidPage = machine->ReadRegister(BadVAddrReg);
-		
-		printf("invalidPage = %i\n", invalidPage);
-		
+		printf("PageFaultException!\ninvalidPage (address) = %i\n", invalidPage);
 		currentThread->space->loadPage(invalidPage);
-		
 		return;	
 		
 	// End code changes by Chet Ransonet

@@ -176,7 +176,8 @@ AddrSpace::AddrSpace(OpenFile *executable)
 void AddrSpace::loadPage(int badVAddr)
 {
 	int virtualPage = badVAddr / PageSize;
-	int offset = 0, pAddr;
+	int offset = 0, offset2 = 0, pAddr, size;
+	bool read = false;
 		
 	// for now, terminate nachos if out of memory
 	if(memMap->NumClear() < 1)
@@ -186,33 +187,63 @@ void AddrSpace::loadPage(int badVAddr)
 	}
 	
 	pageTable[virtualPage].physicalPage = memMap->Find();
-	pageTable[virtualPage].valid = TRUE;
-	
+	pageTable[virtualPage].valid = true;
+	pageTable[virtualPage].readOnly = false;
 	memMap->Print();
 	
-	printf("virtualPage = %i\npageTable[virtualPage].physicalPage = %i\n", virtualPage, pageTable[virtualPage].physicalPage);
+	printf("page that faulted: %i\nphysical page selected: %i\n", virtualPage, pageTable[virtualPage].physicalPage);
 	
-	pAddr = pageTable[virtualPage].physicalPage * PageSize;
-	
-    memset(machine->mainMemory + pAddr, 0, PageSize);
-
-    	
-    if (noffH.code.size > 0)
-    {
-        file->ReadAt(&(machine->mainMemory[pAddr]), PageSize, readOffset + 
-        	noffH.code.inFileAddr);
-	}
-	
-    if (noffH.initData.size > 0)
-    {
-        file->ReadAt(&(machine->mainMemory[pAddr]), PageSize, readOffset + 
-        	noffH.initData.inFileAddr);
+	while (offset < PageSize)
+	{
+		pAddr = pageTable[virtualPage].physicalPage * PageSize + offset;
+		
+	    
+	    if (noffH.code.size > 0 && badVAddr < noffH.code.virtualAddr + noffH.code.size && badVAddr >= noffH.code.virtualAddr)
+		{
+	    	printf("code\n");
+	    	offset2 = badVAddr - noffH.code.virtualAddr;
+	    	size = min(PageSize - offset, noffH.code.size - offset2);
+	    	memset(machine->mainMemory + pAddr + offset, 0, size);
+	        file->ReadAt(&(machine->mainMemory[pAddr]), size, offset2 + noffH.code.inFileAddr);
+	        if(size == PageSize)
+	        	pageTable[virtualPage].readOnly = true;
+		}
+		
+	    else if (noffH.initData.size > 0 && badVAddr < noffH.initData.virtualAddr + noffH.initData.size && badVAddr >= noffH.initData.virtualAddr)
+		{
+	    	printf("initData\n");
+	    	offset2 = badVAddr - noffH.initData.virtualAddr;
+	    	size = min(PageSize - offset, noffH.initData.size - offset2);
+	    	memset(machine->mainMemory + pAddr + offset, 0, size);
+	        file->ReadAt(&(machine->mainMemory[pAddr]), size, offset2 + noffH.initData.inFileAddr);
+    	}
+	    
+	    else if (noffH.uninitData.size > 0 && badVAddr >= noffH.uninitData.virtualAddr && badVAddr < noffH.uninitData.virtualAddr + noffH.uninitData.size)
+	    {
+	    	printf("uninitData\n");
+	    	size = min(PageSize - offset, noffH.uninitData.size + noffH.uninitData.virtualAddr - badVAddr);
+	    	bzero(&(machine->mainMemory[pAddr]), size);
+	    }
+	    
+	    else
+	    {
+	    	printf("stack or other\n");
+	    	bzero(&(machine->mainMemory[pAddr]), PageSize - offset);
+	    	return;
+	    }
+	    
+	    offset += size;
+	    badVAddr += size;
     }
     
-    
-    
-    //if (fileSystem->Create("testfile.swap", 200)) //creates a blank testfile.swap
+    return;
+    //pseudo code for swap files
+    /*if (fileSystem->Create("testfile.swap", 200)) //creates a blank testfile.swap
     	//printf("file created\n");
+    	
+    swapfile = fileSystem->Open(testfile.swap);
+    
+    swapfile->WriteAt(stuff, 0);*/
 }
 // End code changes by Chet Ransonet
 
