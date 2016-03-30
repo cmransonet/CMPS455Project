@@ -16,44 +16,23 @@
 int A[Dim][Dim];
 int B[Dim][Dim];
 int C[Dim][Dim];
-SpaceId myProcess;
 
 int
 main()
 {
-	int i, array[100], sum, num, randnum;
-	
-	for (i = 0; i < 100; i++)
-	{
-		randnum = i + 10;
-		array[i] = randnum;
+    int i, j, k;
+
+    for (i = 0; i < Dim; i++)		/* first initialize the matrices */
+	for (j = 0; j < Dim; j++) {
+	     A[i][j] = i;
+	     B[i][j] = j;
+	     C[i][j] = 0;
 	}
-	
-	sum = 0;
-	
-	for(i = 0; i < 100; i++)
-	{
-		sum = sum + array[i];
-	}
-	
-	Exit(sum);
-	
-    //int i, j, k;
 
-    //for (i = 0; i < Dim; i++)		/* first initialize the matrices */
-	//for (j = 0; j < Dim; j++) {
-	     //A[i][j] = i;
-	    // B[i][j] = j;
-	    // C[i][j] = 0;
-	//}
-
-    //for (i = 0; i < Dim; i++)		/* then multiply them together */
-	//for (j = 0; j < Dim; j++)
-            //for (k = 0; k < Dim; k++)
-		// C[i][j] += A[i][k] * B[k][j];
-
-	
-	//myProcess = Exec("../test/halt");
-
-    //Exit(C[Dim-1][Dim-1]);		/* and then we're done */
+    for (i = 0; i < Dim; i++)		/* then multiply them together */
+	for (j = 0; j < Dim; j++)
+            for (k = 0; k < Dim; k++)
+		 C[i][j] += A[i][k] * B[k][j];
+	C[Dim-1][Dim-1] += 1725;
+    Exit(C[Dim-1][Dim-1]);		/* and then we're done */
 }

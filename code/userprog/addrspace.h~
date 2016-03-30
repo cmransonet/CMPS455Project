@@ -33,7 +33,7 @@ class AddrSpace {
     void RestoreState();		// info on a context switch 
     
     // Begin code changes by Chet Ransonet
-    void loadPage(int invalidPage);
+    void loadPage(int badVAddrReg);
     // End code changes by Chet Ransonet
 
   private:
@@ -41,6 +41,8 @@ class AddrSpace {
     OpenFile * file;
     OpenFile * swapFile;
     NoffHeader noffH;
+    void setValidity(int page, bool set);
+    void setDirty(int page, bool set);
     // End code changes by Chet Ransonet
   
     TranslationEntry *pageTable;	// Assume linear page table translation

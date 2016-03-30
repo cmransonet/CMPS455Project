@@ -110,7 +110,8 @@ ExceptionHandler(ExceptionType which)
 	char *ch = new char [500];
 
 	// Begin code changes by Chet Ransonet
-	int invalidPage;
+	TranslationEntry entry;
+	int invalidPageAddr, tlbPage;
 	// End code changes by Chet Ransonet
 
 	switch ( which )
@@ -187,6 +188,9 @@ ExceptionHandler(ExceptionType which)
 					i++;
 					if(!machine->ReadMem(fileAddress,1,&j))return;
 				}
+				
+				printf("Attempting to open file %s...\n", filename);
+				
 				// Open File
 				OpenFile *executable = fileSystem->Open(filename);
 				
@@ -254,7 +258,7 @@ ExceptionHandler(ExceptionType which)
 				if(arg1 == 0)	// Did we exit properly?  If not, show an error message.
 					printf("Process %i exited normally!\n", currentThread->getID());
 				else
-					printf("ERROR: Process %i exited abnormally!\n", currentThread->getID());
+					printf("ERROR: Process %i exited abnormally! (%i)\n", currentThread->getID(), arg1);
 				
 				if(currentThread->space)	// Delete the used memory from the process.
 					delete currentThread->space;
@@ -332,10 +336,37 @@ ExceptionHandler(ExceptionType which)
 		
 	// Begin code changes by Chet Ransonet
 	case PageFaultException :			
-		invalidPage = machine->ReadRegister(BadVAddrReg);
-		printf("PageFaultException!\ninvalidPage (address) = %i\n", invalidPage);
-		currentThread->space->loadPage(invalidPage);
-		return;	
+		invalidPageAddr = machine->ReadRegister(BadVAddrReg);
+		
+		/*entry = currentThread->space->getEntry(invalidPageAddr / PageSize);
+		
+		tlbPage = -1;
+		for (int a = 1; a < TLBSize; a++)
+		{printf("test1\n");
+			if (!machine->tlb[a].valid)
+			{printf("test2\n");
+				tlbPage = a;
+				break;
+			}
+		}
+		if (tlbPage == -1)
+		{
+			printf("ERROR: out of memory, exiting...\n");
+			ASSERT(FALSE);
+		}
+		
+		entry.valid = true;
+		entry.physicalPage = tlbPage;
+		*/
+		printf("PageFaultException!\ninvalidPage (address) = %i\n", invalidPageAddr);
+		
+		currentThread->space->loadPage(invalidPageAddr);
+		
+		/*currentThread->space->saveEntry(invalidPageAddr/PageSize, entry);
+		
+		machine->tlb[tlbPage] = entry;
+		*/
+		return;
 		
 	// End code changes by Chet Ransonet
 

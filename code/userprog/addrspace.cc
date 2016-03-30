@@ -121,7 +121,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
     for (i = 0; i < numPages; i++) {
 		pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
 		//pageTable[i].physicalPage = i;	//Replace with pageTable[i].physicalPage = i + startPage;
-		pageTable[i].physicalPage = i + startPage;
+		pageTable[i].physicalPage = -1; //i + startPage;
 		// Begin code changes by Chet Ransonet
 		pageTable[i].valid = FALSE;//TRUE;
 		// End code changes by Chet Ransonet
@@ -170,71 +170,89 @@ AddrSpace::AddrSpace(OpenFile *executable)
 }
 
 // Begin code changes by Chet Ransonet
-
+void AddrSpace::setValid(int page, bool set)
+{
+	pageTable[page].valid = set;
+}
+  
+void AddrSpace::setDirty(int page, bool set)
+{
+	pageTable[page].dirty = set;
+}
 // called in the case of a PageFaultException
 // loads code and data into a free physical page if there is one
 void AddrSpace::loadPage(int badVAddr)
-{
-	int virtualPage = badVAddr / PageSize;
-	int offset = 0, offset2 = 0, pAddr, size;
-	bool read = false;
-		
-	// for now, terminate nachos if out of memory
-	if(memMap->NumClear() < 1)
-	{	
-		printf("ERROR: Out of memory. AddrSpace::loadPage\n");
-		ASSERT(FALSE); // terminate nachos
-	}
+{	
+	int virtualPage = badVAddr / PageSize, physPage;
+	unsigned int pageStart, offset, size;
 	
-	pageTable[virtualPage].physicalPage = memMap->Find();
+	physPage = memMap->Find();
+	if (physPage == -1)
+	{
+		printf("ERROR: out of memory, exiting...\n");
+		ASSERT(FALSE);
+	}	
+	pageTable[virtualPage].physicalPage = physPage;
 	pageTable[virtualPage].valid = true;
 	pageTable[virtualPage].readOnly = false;
 	memMap->Print();
 	
-	printf("page that faulted: %i\nphysical page selected: %i\n", virtualPage, pageTable[virtualPage].physicalPage);
+	//debugging
+	printf("page that faulted: %i\nphysical page selected: %i\n", virtualPage, physPage);
 	
-	while (offset < PageSize)
+	bzero(machine->mainMemory + PageSize * physPage, PageSize);
+	
+	// code segment
+	if (noffH.code.virtualAddr < (virtualPage+1) * PageSize && noffH.code.virtualAddr + noffH.code.size > virtualPage * PageSize)
 	{
-		pAddr = pageTable[virtualPage].physicalPage * PageSize + offset;
-		
-	    
-	    if (noffH.code.size > 0 && badVAddr < noffH.code.virtualAddr + noffH.code.size && badVAddr >= noffH.code.virtualAddr)
+		if (noffH.code.virtualAddr <= virtualPage * PageSize)
 		{
-	    	printf("code\n");
-	    	offset2 = badVAddr - noffH.code.virtualAddr;
-	    	size = min(PageSize - offset, noffH.code.size - offset2);
-	    	memset(machine->mainMemory + pAddr + offset, 0, size);
-	        file->ReadAt(&(machine->mainMemory[pAddr]), size, offset2 + noffH.code.inFileAddr);
-	        /*if(size == PageSize)
-	        	pageTable[virtualPage].readOnly = true;*/
+			pageStart = 0;
+			offset = virtualPage * PageSize - noffH.code.virtualAddr;
+		}
+		else 
+		{
+			pageStart = noffH.code.virtualAddr - virtualPage * PageSize;
+			offset = 0;
 		}
 		
-	    else if (noffH.initData.size > 0 && badVAddr < noffH.initData.virtualAddr + noffH.initData.size && badVAddr >= noffH.initData.virtualAddr)
+		size = PageSize - pageStart;
+		if (noffH.code.virtualAddr + noffH.code.size < (virtualPage+1) * PageSize)
+			size -= (virtualPage+1) * PageSize - (noffH.code.virtualAddr + noffH.code.size);
+			
+		file->ReadAt(machine->mainMemory + PageSize * physPage + pageStart,
+		 	size, 
+		 	noffH.code.inFileAddr + offset);
+	
+	}
+	
+	// initData segment
+	if (noffH.initData.virtualAddr < (virtualPage+1) * PageSize &&
+		noffH.initData.virtualAddr + noffH.initData.size > virtualPage * PageSize)
+	{
+		if (noffH.initData.virtualAddr <= virtualPage * PageSize)
 		{
-	    	printf("initData\n");
-	    	offset2 = badVAddr - noffH.initData.virtualAddr;
-	    	size = min(PageSize - offset, noffH.initData.size - offset2);
-	    	memset(machine->mainMemory + pAddr + offset, 0, size);
-	        file->ReadAt(&(machine->mainMemory[pAddr]), size, offset2 + noffH.initData.inFileAddr);
-    	}
-	    
-	    else if (noffH.uninitData.size > 0 && badVAddr >= noffH.uninitData.virtualAddr && badVAddr < noffH.uninitData.virtualAddr + noffH.uninitData.size)
-	    {
-	    	printf("uninitData\n");
-	    	size = min(PageSize - offset, noffH.uninitData.size + noffH.uninitData.virtualAddr - badVAddr);
-	    	bzero(&(machine->mainMemory[pAddr]), size);
-	    }
-	    
-	    else
-	    {
-	    	printf("stack or other\n");
-	    	bzero(&(machine->mainMemory[pAddr]), PageSize - offset);
-	    	return;
-	    }
-	    
-	    offset += size;
-	    badVAddr += size;
-    }
+			pageStart = 0;
+			offset = virtualPage * PageSize - noffH.initData.virtualAddr;
+		}
+		else
+		{
+			pageStart = noffH.initData.virtualAddr - virtualPage * PageSize;
+			offset = 0;
+		}
+		
+		size = PageSize - pageStart;
+		if (noffH.initData.virtualAddr + noffH.initData.size < (virtualPage+1) * PageSize)
+			size -= (virtualPage+1) * PageSize - (noffH.initData.virtualAddr + noffH.initData.size);
+			
+		file->ReadAt(machine->mainMemory + PageSize * physPage + pageStart, 
+			size, 
+			noffH.initData.inFileAddr + offset);
+	
+	}
+	
+	currentThread->space->setDirty(virtualPage, false);
+	currentThread->space->setValid(virtualPage, true);
     
     return;
     //pseudo code for swap files
@@ -245,6 +263,7 @@ void AddrSpace::loadPage(int badVAddr)
     
     swapfile->WriteAt(stuff, 0);*/
 }
+
 // End code changes by Chet Ransonet
 
 //----------------------------------------------------------------------
@@ -259,7 +278,7 @@ AddrSpace::~AddrSpace()
 {
 	// Only clear the memory if it was set to begin with
 	// which in turn only happens after space is set to true
-	if(space)
+	/*if(space)
 	{
 		for(unsigned int i = startPage; i < numPages + startPage; i++)	// We need an offset of startPage + numPages for clearing.
 			memMap->Clear(i);
@@ -267,8 +286,20 @@ AddrSpace::~AddrSpace()
 		delete pageTable;
 
 		memMap->Print();
-	}
+	}*/
 	// Begin code changes by Chet Ransonet
+	if(space)
+	{
+		for(unsigned int i = 0; i < numPages; i++)	
+		{
+			if(pageTable[i].physicalPage != -1)
+				memMap->Clear(pageTable[i].physicalPage);
+		}
+		delete pageTable;
+
+		memMap->Print();
+	}
+	
 	delete file;
 	// End code changes by Chet Ransonet
 }

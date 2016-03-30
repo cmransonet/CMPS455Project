@@ -66,6 +66,12 @@ matmult: matmult.o start.o
 	$(LD) $(LDFLAGS) start.o matmult.o -o matmult.coff
 	../bin/coff2noff matmult.coff matmult
 	
+into_matmult.o: into_matmult.c
+	$(CC) $(CFLAGS) -c into_matmult.c
+into_matmult: into_matmult.o start.o
+	$(LD) $(LDFLAGS) start.o into_matmult.o -o into_matmult.coff
+	../bin/coff2noff into_matmult.coff into_matmult
+	
 loop.o: loop.c
 	$(CC) $(CFLAGS) -c loop.c
 loop: loop.o start.o
