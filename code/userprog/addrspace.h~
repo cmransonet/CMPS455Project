@@ -41,7 +41,7 @@ class AddrSpace {
     OpenFile * file;
     OpenFile * swapFile;
     NoffHeader noffH;
-    void setValidity(int page, bool set);
+    void setValid(int page, bool set);
     void setDirty(int page, bool set);
     // End code changes by Chet Ransonet
   

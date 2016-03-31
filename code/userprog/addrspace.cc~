@@ -170,31 +170,24 @@ AddrSpace::AddrSpace(OpenFile *executable)
 }
 
 // Begin code changes by Chet Ransonet
-void AddrSpace::setValid(int page, bool set)
-{
-	pageTable[page].valid = set;
-}
-  
-void AddrSpace::setDirty(int page, bool set)
-{
-	pageTable[page].dirty = set;
-}
+
 // called in the case of a PageFaultException
 // loads code and data into a free physical page if there is one
 void AddrSpace::loadPage(int badVAddr)
 {	
 	int virtualPage = badVAddr / PageSize, physPage;
-	unsigned int pageStart, offset, size;
+	unsigned int pageStart, offset, size; //modifiers for copying data into memory
 	
-	physPage = memMap->Find();
-	if (physPage == -1)
+	physPage = memMap->Find(); // select a physical page not in use
+	if (physPage == -1) //if no page was found, terminate. 
+	//TODO: here's where we would use swap files!
 	{
 		printf("ERROR: out of memory, exiting...\n");
 		ASSERT(FALSE);
 	}	
 	pageTable[virtualPage].physicalPage = physPage;
-	pageTable[virtualPage].valid = true;
 	pageTable[virtualPage].readOnly = false;
+	
 	memMap->Print();
 	
 	//debugging
@@ -202,65 +195,59 @@ void AddrSpace::loadPage(int badVAddr)
 	
 	bzero(machine->mainMemory + PageSize * physPage, PageSize);
 	
+	pageStart = 0; //starting place to load in code/data
+	offset = 0;	//modifies the location we're reading from
+	
 	// code segment
-	if (noffH.code.virtualAddr < (virtualPage+1) * PageSize && noffH.code.virtualAddr + noffH.code.size > virtualPage * PageSize)
+	if (noffH.code.size > 0)
 	{
-		if (virtualPage * PageSize > noffH.code.virtualAddr)
-		{
-			offset = 0;
-			pageStart = noffH.code.virtualAddr - virtualPage * PageSize;
-			
-		}
-		else 
-		{
-			pageStart = 0;
+		if (noffH.code.virtualAddr <= virtualPage * PageSize)
 			offset = virtualPage * PageSize - noffH.code.virtualAddr;
-		}
+		else 
+			pageStart = noffH.code.virtualAddr - virtualPage * PageSize;		
 		
+		// set size of data to be copied
 		size = PageSize - pageStart;
 		if (noffH.code.virtualAddr + noffH.code.size < (virtualPage+1) * PageSize)
-			size -= (virtualPage+1) * PageSize - (noffH.code.virtualAddr + noffH.code.size);
+			size -= (virtualPage) * PageSize - (noffH.code.virtualAddr + noffH.code.size);
 			
-		file->ReadAt(machine->mainMemory + PageSize * physPage + pageStart,
+		// copy data to memory	
+		file->ReadAt(&(machine->mainMemory[PageSize * physPage + pageStart]),
 		 	size, 
 		 	noffH.code.inFileAddr + offset);
-	
 	}
+	
+	pageStart = 0;
+	offset = 0;
 	
 	// initData segment
-	if (noffH.initData.virtualAddr < (virtualPage+1) * PageSize &&
-		noffH.initData.virtualAddr + noffH.initData.size > virtualPage * PageSize)
+	if (noffH.initData.size > 0)
 	{
-		if (virtualPage * PageSize > noffH.initData.virtualAddr)
-		{
-			offset = 0;
-			pageStart = noffH.initData.virtualAddr - virtualPage * PageSize;
-		}
-		else
-		{
-			pageStart = 0;
+		if (noffH.initData.virtualAddr <= virtualPage * PageSize)
 			offset = virtualPage * PageSize - noffH.initData.virtualAddr;
-		}
+		else
+			pageStart = noffH.initData.virtualAddr - virtualPage * PageSize;
 		
+		//set size of data to be copied
 		size = PageSize - pageStart;
 		if (noffH.initData.virtualAddr + noffH.initData.size < (virtualPage+1) * PageSize)
-			size -= (virtualPage+1) * PageSize - (noffH.initData.virtualAddr + noffH.initData.size);
+			size -= (virtualPage) * PageSize - (noffH.initData.virtualAddr + noffH.initData.size);
 			
-		file->ReadAt(machine->mainMemory + PageSize * physPage + pageStart, 
+		//copy data into memory
+		file->ReadAt(&(machine->mainMemory[PageSize * physPage+pageStart]) , 
 			size, 
 			noffH.initData.inFileAddr + offset);
-	
 	}
 	
-	currentThread->space->setDirty(virtualPage, false);
-	currentThread->space->setValid(virtualPage, true);
+	pageTable[virtualPage].valid = true;
+	pageTable[virtualPage].dirty = false;
     
     return;
     //pseudo code for swap files
     /*if (fileSystem->Create("testfile.swap", 200)) //creates a blank testfile.swap
     	//printf("file created\n");
     	
-    swapfile = fileSystem->Open(testfile.swap);
+    swapfile = fileSywstem->Open(testfile.swap);
     
     swapfile->WriteAt(stuff, 0);*/
 }
@@ -279,6 +266,8 @@ AddrSpace::~AddrSpace()
 {
 	// Only clear the memory if it was set to begin with
 	// which in turn only happens after space is set to true
+	
+	// Begin code changes by Chet Ransonet
 	/*if(space)
 	{
 		for(unsigned int i = startPage; i < numPages + startPage; i++)	// We need an offset of startPage + numPages for clearing.
@@ -288,7 +277,6 @@ AddrSpace::~AddrSpace()
 
 		memMap->Print();
 	}*/
-	// Begin code changes by Chet Ransonet
 	if(space)
 	{
 		for(unsigned int i = 0; i < numPages; i++)	

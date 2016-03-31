@@ -110,8 +110,7 @@ ExceptionHandler(ExceptionType which)
 	char *ch = new char [500];
 
 	// Begin code changes by Chet Ransonet
-	TranslationEntry entry;
-	int invalidPageAddr, tlbPage;
+	int invalidPageAddr;
 	// End code changes by Chet Ransonet
 
 	switch ( which )
@@ -176,11 +175,16 @@ ExceptionHandler(ExceptionType which)
 				
 				for(int m = 0; m < 100; m++)
 					filename[m] = NULL;
-
+					
+				printf("fileAddress = %i\n", fileAddress); //debug
+			
 				// Free up allocation space and get the file name
-				if(!machine->ReadMem(fileAddress,1,&j))return;
+				if(!machine->ReadMem(fileAddress,1,&j))
+				{
+					machine->ReadMem(fileAddress,1,&j);
+				}
 				i = 0;
-
+				
 				while(j != 0)
 				{
 					filename[i]=(char)j;
@@ -188,6 +192,9 @@ ExceptionHandler(ExceptionType which)
 					i++;
 					if(!machine->ReadMem(fileAddress,1,&j))return;
 				}
+				
+				printf("Attempting to open file %s\n", filename);
+				
 				// Open File
 				OpenFile *executable = fileSystem->Open(filename);
 				
@@ -203,6 +210,7 @@ ExceptionHandler(ExceptionType which)
 				AddrSpace *space;
 				space = new AddrSpace(executable);
 				//delete executable;
+				
 				// Do we have enough space?
 				if(!currentThread->killNewChild)	// If so...
 				{
@@ -335,34 +343,10 @@ ExceptionHandler(ExceptionType which)
 	case PageFaultException :			
 		invalidPageAddr = machine->ReadRegister(BadVAddrReg);
 		
-		/*entry = currentThread->space->getEntry(invalidPageAddr / PageSize);
-		
-		tlbPage = -1;
-		for (int a = 1; a < TLBSize; a++)
-		{printf("test1\n");
-			if (!machine->tlb[a].valid)
-			{printf("test2\n");
-				tlbPage = a;
-				break;
-			}
-		}
-		if (tlbPage == -1)
-		{
-			printf("ERROR: out of memory, exiting...\n");
-			ASSERT(FALSE);
-		}
-		
-		entry.valid = true;
-		entry.physicalPage = tlbPage;
-		*/
-		printf("PageFaultException!\ninvalidPage (address) = %i\n", invalidPageAddr);
+		printf("PageFaultException! invalidPageAddr = %i\n", invalidPageAddr);
 		
 		currentThread->space->loadPage(invalidPageAddr);
 		
-		/*currentThread->space->saveEntry(invalidPageAddr/PageSize, entry);
-		
-		machine->tlb[tlbPage] = entry;
-		*/
 		return;
 		
 	// End code changes by Chet Ransonet

@@ -41,8 +41,6 @@ class AddrSpace {
     OpenFile * file;
     OpenFile * swapFile;
     NoffHeader noffH;
-    void setValid(int page, bool set);
-    void setDirty(int page, bool set);
     // End code changes by Chet Ransonet
   
     TranslationEntry *pageTable;	// Assume linear page table translation
