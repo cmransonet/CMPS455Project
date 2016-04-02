@@ -41,6 +41,7 @@ class AddrSpace {
     void DestroySwapFile();
 
 	bool Swapin(int page, int frame);
+	
    	bool Swapout(int frame);
    	
    	void savePageTableEntry(TranslationEntry entry, int virtualPage){
@@ -59,6 +60,7 @@ class AddrSpace {
    				else
    					return -1;
    		}
+   		return -1;
    	};
    	
    	void setDirty(int vpage, bool set){
@@ -86,7 +88,6 @@ class AddrSpace {
 	bool space;		//Boolean to remember if there was enough space or not
 	
 	//Begin code changes by Ryan Mazerole
-	OpenFile * swapfile;
     char swapfilename[8];
     //end code changes by Ryan Mazerole
 };

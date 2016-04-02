@@ -20,6 +20,8 @@
 #include "addrspace.h"
 //#include "noff.h" //moved to addrspace.h - Chet
 
+extern int swapChoice;
+
 //----------------------------------------------------------------------
 // SwapHeader
 // 	Do little endian to big endian conversion on the bytes in the 
@@ -64,7 +66,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 
     //NoffHeader noffH;
 	// End code changes by Chet Ransonet
-    unsigned int i, size, /*pAddr,*/ counter;
+    unsigned int i, size, counter;
 	space = false;
 	
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
@@ -79,6 +81,10 @@ AddrSpace::AddrSpace(OpenFile *executable)
 						// to leave room for the stack
     numPages = divRoundUp(size, PageSize); 
     size = numPages * PageSize;
+
+	Swap(size + 1000);
+	//swapFile = fileSystem->Open(swapfilename);
+	
 
 	//Change this to reference the bitmap for free pages
 	//instead of total amount of pages
@@ -97,7 +103,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 		else
 			counter = 0;
 	}
-	
+/*	
 	DEBUG('a', "%i contiguous blocks found for %i pages\n", counter, numPages);
 
 	//If no memory available, terminate
@@ -107,7 +113,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 		currentThread->killNewChild = true;
 		return;
 	}
-
+*/
 	//If we get past the if statement, then there was sufficient space
 	space = true;
 
@@ -176,17 +182,31 @@ AddrSpace::AddrSpace(OpenFile *executable)
 void AddrSpace::loadPage(int badVAddr)
 {	
 	int virtualPage = badVAddr / PageSize, physPage;
+	char * data = new char[PageSize];
 	unsigned int pageStart, offset, size; //modifiers for copying data into memory
 	
 	physPage = memMap->Find(); // select a physical page not in use
-	if (physPage == -1) //if no page was found, terminate. 
-	//TODO: here's where we would use swap files!
+	if (physPage == -1) //if no page was found, swap out a page
 	{
-		printf("ERROR: out of memory, exiting...\n");
-		ASSERT(FALSE);
+		if(swapChoice == 1) // FIFO
+		{
+			printf("Out of memory, swapping pages using FIFO page replacement\n");
+			//physPage =   //select a physical page to swap out and replace
+			//SwapOut(physPage);
+		}
+		else if (swapChoice == 2) // Random
+		{
+			printf("Out of memory, swapping pages using Random page replacement\n");
+			physPage = Random() % 32 - 1;
+			Swapout(physPage);
+		}
+		else // default
+		{
+			printf("Out of memory, virtual memory scheme not selected, exiting...\n");
+			currentThread->Finish(); 
+		}
 	}	
 	pageTable[virtualPage].physicalPage = physPage;
-	//pageTable[virtualPage].readOnly = false;
 	
 	memMap->Print();
 	
@@ -194,6 +214,7 @@ void AddrSpace::loadPage(int badVAddr)
 	printf("page that faulted: %i\nphysical page selected: %i\n", virtualPage, physPage);
 	
 	bzero(machine->mainMemory + PageSize * physPage, PageSize);
+	//bzero(data, PageSize);
 	
 	pageStart = 0; //starting place to load in code/data
 	offset = 0;	//modifies the location we're reading from
@@ -215,6 +236,9 @@ void AddrSpace::loadPage(int badVAddr)
 		file->ReadAt(&(machine->mainMemory[PageSize * physPage + pageStart]),
 		 	size, 
 		 	noffH.code.inFileAddr + offset);
+		 		 
+		//file->ReadAt(&data + pageStart,size,noffH.code.inFileAddr + offset);
+		 
 	}
 	
 	pageStart = 0;
@@ -237,19 +261,23 @@ void AddrSpace::loadPage(int badVAddr)
 		file->ReadAt(&(machine->mainMemory[PageSize * physPage+pageStart]) , 
 			size, 
 			noffH.initData.inFileAddr + offset);
+		//file->ReadAt(data, size, noffH.initData.inFileAddr + offset);
 	}
+	
+	int charactersWritten;
+		char * written = machine->mainMemory + physPage * PageSize;
+	
+		charactersWritten = swapFile->WriteAt(written, PageSize, virtualPage * PageSize);
+	
+		if(charactersWritten != PageSize);
+			printf("charactersWritten != PageSize\n");
+	
+	delete[] data;
 	
 	pageTable[virtualPage].valid = true;
 	pageTable[virtualPage].dirty = false;
     
     return;
-    //pseudo code for swap files
-    /*if (fileSystem->Create("testfile.swap", 200)) //creates a blank testfile.swap
-    	//printf("file created\n");
-    	
-    swapfile = fileSywstem->Open(testfile.swap);
-    
-    swapfile->WriteAt(stuff, 0);*/
 }
 
 // End code changes by Chet Ransonet
@@ -290,6 +318,8 @@ AddrSpace::~AddrSpace()
 	}
 	
 	delete file;
+	
+	
 	//Begin code changes by Ryan Mazerole
 	DestroySwapFile();
 	//End code changes by Ryan Mazerole
@@ -374,7 +404,7 @@ bool AddrSpace::Swapin(int page, int frame){
 	ASSERT(page >= 0);
 	ASSERT(frame >= 0 && frame < NumPhysPages);
 
-	AddrSpace * space = currentThread->space;
+	//AddrSpace * space = currentThread->space;
 
 	int characterRead;
 	char *position = machine->mainMemory + frame * PageSize;
@@ -384,8 +414,8 @@ bool AddrSpace::Swapin(int page, int frame){
 	bool check = (characterRead == PageSize);
 
 	if(check){
-		space->setValidity(page, true);
-		space->setDirty(page, true);
+		setValidity(page, true);
+		setDirty(page, true);
 	}
 
 	return check;
@@ -396,16 +426,16 @@ bool AddrSpace::Swapout(int frame){
 	
 	ASSERT(frame >= 0 && frame < NumPhysPages);
 	
-	AddrSpace * space = currentThread->space;
+	//AddrSpace * space = currentThread->space;
 	
-	int page = space->getPageNumber(frame);
+	int page = getPageNumber(frame);
 	
 	if(page == -1){
 		ASSERT(false);
 		return false;
 	}
 	
-	TranslationEntry entry = space->pageTableEntry(page);
+	TranslationEntry entry = pageTableEntry(page);
 	
 	if(entry.dirty){
 		int charactersWritten;
@@ -420,7 +450,7 @@ bool AddrSpace::Swapout(int frame){
 	entry.dirty = false;
 	entry.physicalPage = -1;
 	
-	space->savePageTableEntry(entry, entry.virtualPage);
+	savePageTableEntry(entry, entry.virtualPage);
 	
 	return true;
 }
