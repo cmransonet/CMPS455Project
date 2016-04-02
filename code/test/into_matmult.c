@@ -16,7 +16,6 @@ int
 main()
 {
 	Exec("../test/matmult");
-	Exec("../test/matmult"); 
 	//Exec("matmult");
     /* not reached */
 }
