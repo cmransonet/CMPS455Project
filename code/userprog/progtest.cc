@@ -39,6 +39,14 @@ StartProcess(char *filename)
 		printf("Best-fit.\n");
 	else
 		printf("Worst-fit.\n");
+		
+	printf("Memory scheme chosen: ");
+	if(memChoice == 1)
+		printf("FIFO Page Replacement.\n");
+	else if (memChoice == 2)
+		printf("Random Page Replacement.\n");
+	else
+		printf("Demand Paging Only. (default)\n");
 	
     space = new AddrSpace(executable);    
     currentThread->space = space;

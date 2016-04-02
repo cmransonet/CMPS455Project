@@ -51,16 +51,24 @@ class List {
 
     void Mapcar(VoidFunctionPtr func);	// Apply "func" to every element 
 					// on the list
-    bool IsEmpty();		// is the list empty?    
+    bool IsEmpty();		// is the list empty? 
+    
+    int frameNum;		//number of frame in the list 0-(numPhysPages-1)
 
     // Routines to put/get items on/off list in order (sorted by key)
     void SortedInsert(void *item, int sortKey);	// Put item into list
     void *SortedRemove(int *keyPtr); 	  	// Remove first item from list
 	int getSize(){return size;}
+//begin changes made by Stephen 
+    void DeleteRandom(int frameID);
+//end changes made by Stephen
 
   private:
     ListElement *first;  	// Head of the list, NULL if list is empty
     ListElement *last;		// Last element of list
+//begin changes made by Stephen
+    ListElement *previous;	//previous element in list
+//end changes made by Stephen
 	int size;
 };
 
