@@ -20,6 +20,7 @@ Timer *timer;				// the hardware timer device,
 					// for invoking context switches
 int threadChoice;
 int memChoice;
+int swapChoice;
 bool pageFlag;
 
 BitMap * memMap;
@@ -121,7 +122,18 @@ Initialize(int argc, char **argv)
 	    else
 			threadChoice = atoi(*(argv+1));
 	    argCount = 2;
-	} else if (!strcmp(*argv, "-M")) {
+	} 
+	//Begin code changes by Robert Knott
+	else if (!strcmp(*argv, "-V")) {
+		if (*(argv+1) == NULL)
+			swapChoice = 0;
+		else
+			swapChoice = atoi(*(argv+1));
+		//printf("swapChoice = %i\n", swapChoice);
+		argCount = 2;
+	}
+	//End code changes by Robert Knott
+	else if (!strcmp(*argv, "-M")) {
 	    if(*(argv+1) == NULL)
 			memChoice = 1;
 	    else

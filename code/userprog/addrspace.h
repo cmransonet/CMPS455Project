@@ -35,6 +35,40 @@ class AddrSpace {
     // Begin code changes by Chet Ransonet
     void loadPage(int badVAddrReg);
     // End code changes by Chet Ransonet
+    
+    //Begin code changes by Ryan Mazerole
+    void Swap(int pageNum);
+    void DestroySwapFile();
+
+	bool Swapin(int page, int frame);
+   	bool Swapout(int frame);
+   	
+   	void savePageTableEntry(TranslationEntry entry, int virtualPage){
+   		pageTable[virtualPage] = entry;
+   	};
+   	
+   	TranslationEntry pageTableEntry(int virtualPage){
+   		return pageTable[virtualPage];
+   	};
+   	
+   	int getPageNumber(int frame){
+   		for(int i = 0; i < numPages; i++){
+   				if(pageTable[i].physicalPage == frame && pageTable[i].valid == true){
+   					return i;
+   				}
+   				else
+   					return -1;
+   		}
+   	};
+   	
+   	void setDirty(int vpage, bool set){
+   		pageTable[vpage].dirty = set;
+   	};
+   	
+   	void setValidity(int vpage, bool set){
+   		pageTable[vpage].valid = set;
+   	};
+   	//End code changes by Ryan Mazerole
 
   private:
   	// Begin code changes by Chet Ransonet
@@ -50,6 +84,11 @@ class AddrSpace {
 	unsigned int startPage;		//Page number that the program starts at
 								//in physical memory
 	bool space;		//Boolean to remember if there was enough space or not
+	
+	//Begin code changes by Ryan Mazerole
+	OpenFile * swapfile;
+    char swapfilename[8];
+    //end code changes by Ryan Mazerole
 };
 
 #endif // ADDRSPACE_H

@@ -290,6 +290,9 @@ AddrSpace::~AddrSpace()
 	}
 	
 	delete file;
+	//Begin code changes by Ryan Mazerole
+	DestroySwapFile();
+	//End code changes by Ryan Mazerole
 	// End code changes by Chet Ransonet
 }
 
@@ -349,3 +352,76 @@ void AddrSpace::RestoreState()
     machine->pageTable = pageTable;
     machine->pageTableSize = numPages;
 }
+
+//Begin code changes by Ryan Mazerole
+void AddrSpace::Swap(int pageNum){
+
+	sprintf(swapfilename, "%d.swap", currentThread->getID());
+
+	fileSystem->Create(swapfilename, pageNum * PageSize);
+	swapFile = fileSystem->Open(swapfilename);
+	
+}
+
+void AddrSpace::DestroySwapFile(){
+	
+	delete swapFile;
+	fileSystem->Remove(swapfilename);
+}
+
+bool AddrSpace::Swapin(int page, int frame){
+	
+	ASSERT(page >= 0);
+	ASSERT(frame >= 0 && frame < NumPhysPages);
+
+	AddrSpace * space = currentThread->space;
+
+	int characterRead;
+	char *position = machine->mainMemory + frame * PageSize;
+
+	characterRead = swapFile->ReadAt(position, PageSize, page * PageSize);
+
+	bool check = (characterRead == PageSize);
+
+	if(check){
+		space->setValidity(page, true);
+		space->setDirty(page, true);
+	}
+
+	return check;
+
+}
+
+bool AddrSpace::Swapout(int frame){
+	
+	ASSERT(frame >= 0 && frame < NumPhysPages);
+	
+	AddrSpace * space = currentThread->space;
+	
+	int page = space->getPageNumber(frame);
+	
+	if(page == -1){
+		ASSERT(false);
+		return false;
+	}
+	
+	TranslationEntry entry = space->pageTableEntry(page);
+	
+	if(entry.dirty){
+		int charactersWritten;
+		char * written = machine->mainMemory + frame * PageSize;
+	
+		charactersWritten = swapFile->WriteAt(written, PageSize, page * PageSize);
+	
+		ASSERT(charactersWritten == PageSize);
+	}
+	
+	entry.valid = false;
+	entry.dirty = false;
+	entry.physicalPage = -1;
+	
+	space->savePageTableEntry(entry, entry.virtualPage);
+	
+	return true;
+}
+//End code changes by Ryan Mazerole
