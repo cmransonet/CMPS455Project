@@ -180,9 +180,8 @@ ExceptionHandler(ExceptionType which)
 			
 				// Free up allocation space and get the file name
 				if(!machine->ReadMem(fileAddress,1,&j))
-				{
-					machine->ReadMem(fileAddress,1,&j);
-				}
+					machine->ReadMem(fileAddress,1,&j); //return;
+				
 				i = 0;
 				
 				while(j != 0)
@@ -192,7 +191,7 @@ ExceptionHandler(ExceptionType which)
 					i++;
 					if(!machine->ReadMem(fileAddress,1,&j))return;
 				}
-				
+				StartProcess(filename);
 				printf("Attempting to open file %s\n", filename);
 				
 				// Open File

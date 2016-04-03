@@ -191,7 +191,7 @@ ExceptionHandler(ExceptionType which)
 					i++;
 					if(!machine->ReadMem(fileAddress,1,&j))return;
 				}
-				
+
 				printf("Attempting to open file %s\n", filename);
 				
 				// Open File

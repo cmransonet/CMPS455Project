@@ -18,6 +18,7 @@
 #include "copyright.h"
 #include "system.h"
 #include "addrspace.h"
+
 //#include "noff.h" //moved to addrspace.h - Chet
 
 extern int swapChoice;
@@ -61,6 +62,9 @@ SwapHeader (NoffHeader *noffH)
 
 AddrSpace::AddrSpace(OpenFile *executable)
 {
+
+	// LIST Initialized here
+	 List* PageList = new List();   
 	// Begin code changes by Chet Ransonet
 	file = executable;
 
@@ -140,6 +144,11 @@ AddrSpace::AddrSpace(OpenFile *executable)
 		//Take the global bitmap and set the relevant chunks
 		//to indicate that the memory is in use
 		//memMap->Mark(i + startPage);
+		
+		// Begin code changes by Ben Matkin and Stephen mader
+		// Load page into PageList
+		//PageList->Append(i);
+		// End code changes by Ben Matkin and Stephen Mader
     }
 	
 	//memMap->Print();	// Useful!
@@ -181,6 +190,8 @@ AddrSpace::AddrSpace(OpenFile *executable)
 // loads code and data into a free physical page if there is one
 void AddrSpace::loadPage(int badVAddr)
 {	
+
+	printf("n\nLOADING PAGE_--------------------------\n");
 	int virtualPage = badVAddr / PageSize, physPage;
 	char * data = new char[PageSize];
 	unsigned int pageStart, offset, size; //modifiers for copying data into memory
@@ -193,17 +204,25 @@ void AddrSpace::loadPage(int badVAddr)
 			printf("Out of memory, swapping pages using FIFO page replacement\n");
 			//physPage =   //select a physical page to swap out and replace
 			//SwapOut(physPage);
+		//Begin changes by Ben Matkin and Stephen Mader
+			//physPage = PageList->Remove();
+			SwapOut(physPage);
+		//End changes by Ben Matkin and Stephen Mader
+
 		}
 		else if (swapChoice == 2) // Random
 		{
 			printf("Out of memory, swapping pages using Random page replacement\n");
-			physPage = Random() % 32 - 1;
+		//Begin changes by Ben Matkin and Stephen Mader
+			physPage = Random() % PageList->getSize() - 1; // 32 - 1;
+			PageList->DeleteRandom(physPage);
+		//End changes by Ben Matkin and Stephen Mader
 			Swapout(physPage);
 		}
 		else // default
 		{
 			printf("Out of memory, virtual memory scheme not selected, exiting...\n");
-			ASSERT(false);
+			currentThread->Finish(); 
 		}
 	}	
 	pageTable[virtualPage].physicalPage = physPage;
@@ -211,7 +230,7 @@ void AddrSpace::loadPage(int badVAddr)
 	memMap->Print();
 	
 	//debugging
-	printf("page that faulted: %i\nphysical page selected: %i\n", virtualPage, physPage);
+	printf("page that faulted: %i\nphysical page selected: %i, \nswapchoice %i\n", virtualPage, physPage, swapChoice);
 	
 	bzero(machine->mainMemory + PageSize * physPage, PageSize);
 	//bzero(data, PageSize);
@@ -229,6 +248,7 @@ void AddrSpace::loadPage(int badVAddr)
 		
 		// set size of data to be copied
 		size = PageSize - pageStart;
+
 		if (noffH.code.virtualAddr + noffH.code.size < (virtualPage+1) * PageSize)
 			size -= (virtualPage) * PageSize - (noffH.code.virtualAddr + noffH.code.size);
 			
