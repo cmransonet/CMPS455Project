@@ -72,6 +72,8 @@ class AddrSpace {
    	};
    	//End code changes by Ryan Mazerole
 
+     bool UpdateIPT();
+
   private:
   	// Begin code changes by Chet Ransonet
     OpenFile * file;

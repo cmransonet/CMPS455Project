@@ -151,6 +151,24 @@ AddrSpace::AddrSpace(OpenFile *executable)
 		// End code changes by Ben Matkin and Stephen Mader
     }
 	
+	/*
+    int * threadPointer = (int*)currentThread;
+    printf("Current thread id = %i\n", currentThread->getID());
+    printf("ThreadPointer = %i\n", threadPointer);
+    Thread * testThread = (Thread*) threadPointer;
+	printf("Test Thread Id %i\n", testThread->getID());
+    bool iptPositionFound = FALSE;
+    for(i=0; i <= NumPhysPages; i++) {
+	if (invertedPageTable[i] == NULL) { // First available position to add thread
+		printf("Iterator i = %i\n", i);
+		invertedPageTable[i] = threadPointer;
+		iptPositionFound = TRUE;
+		break;
+	}
+    }
+    if (!iptPositionFound)
+      printf("Unable to find free space in IPT Table. How did we get here. :( \n");
+*/
 	//memMap->Print();	// Useful!
 
 
@@ -191,11 +209,13 @@ AddrSpace::AddrSpace(OpenFile *executable)
 void AddrSpace::loadPage(int badVAddr)
 {	
 
-	printf("n\nLOADING PAGE_--------------------------\n");
+ 	
 	int virtualPage = badVAddr / PageSize, physPage;
 	char * data = new char[PageSize];
 	unsigned int pageStart, offset, size; //modifiers for copying data into memory
 	
+	UpdateIPT();	
+
 	physPage = memMap->Find(); // select a physical page not in use
 	if (physPage == -1) //if no page was found, swap out a page
 	{
@@ -206,7 +226,7 @@ void AddrSpace::loadPage(int badVAddr)
 			//SwapOut(physPage);
 		//Begin changes by Ben Matkin and Stephen Mader
 			//physPage = PageList->Remove();
-			SwapOut(physPage);
+			//SwapOut(physPage);
 		//End changes by Ben Matkin and Stephen Mader
 
 		}
@@ -214,7 +234,7 @@ void AddrSpace::loadPage(int badVAddr)
 		{
 			printf("Out of memory, swapping pages using Random page replacement\n");
 		//Begin changes by Ben Matkin and Stephen Mader
-			physPage = Random() % PageList->getSize() - 1; // 32 - 1;
+			physPage = Random() % NumPhysPages - 1; // 32 - 1;
 			PageList->DeleteRandom(physPage);
 		//End changes by Ben Matkin and Stephen Mader
 			Swapout(physPage);
@@ -475,3 +495,36 @@ bool AddrSpace::Swapout(int frame){
 	return true;
 }
 //End code changes by Ryan Mazerole
+
+
+
+
+//Begin code by Ben Matkin, Stephen Mader, and Robert Knott
+/*
+Updates IPT via current thread. Returns true on success, false on failue (no space in IPT)
+*/
+bool AddrSpace::UpdateIPT()
+{
+    // Assign pointer to current thread
+    int * threadPointer = (int*)currentThread;
+    bool iptPositionFound = FALSE;
+    Thread * testThread;
+    
+    printf("Current thread id = %i\n", currentThread->getID());
+    printf("ThreadPointer = %i\n", threadPointer);
+    testThread = (Thread*) threadPointer;
+    printf("Test Thread Id %i\n", testThread->getID());
+
+    for(int i=0; i <= NumPhysPages; i++) {
+	if (invertedPageTable[i] == NULL) { // First available position to add thread
+		printf("Iterator i = %i\n", i);
+		invertedPageTable[i] = threadPointer;
+		iptPositionFound = TRUE;
+		break;
+	}
+    }
+    if (!iptPositionFound) 
+      printf("Unable to find free space in IPT Table. How did we get here. :( \n");
+    return iptPositionFound;
+}
+//End code by Ben Matkin, Stephen Mader, and Robert Knott

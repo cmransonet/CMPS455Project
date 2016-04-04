@@ -41,6 +41,7 @@ class AddrSpace {
     void DestroySwapFile();
 
 	bool Swapin(int page, int frame);
+	
    	bool Swapout(int frame);
    	
    	void savePageTableEntry(TranslationEntry entry, int virtualPage){
@@ -70,6 +71,8 @@ class AddrSpace {
    		pageTable[vpage].valid = set;
    	};
    	//End code changes by Ryan Mazerole
+
+     bool AddrSpace::UpdateIPT();
 
   private:
   	// Begin code changes by Chet Ransonet
