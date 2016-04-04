@@ -87,8 +87,10 @@ void
 List::Append(void *item)
 {
     ListElement *element = new ListElement(item, 0);
+//begin changes made by Stephen Mader
 	element->frameNum=size;
 	size++;
+//end changes made by Stephen Mader
 
     if (IsEmpty()) {		// list is empty
 	first = element;
@@ -260,33 +262,32 @@ void //*may need idk
 List::DeleteRandom(int frameID)
 {
     ListElement *current = first;
-    if (IsEmpty()) 		//list is null
-	return NULL;
+    if (!IsEmpty()){ 		//list is null
+
 
     if (first == last && current->frameNum == frameID) {	// list had one item, now has none 
         //first = NULL;
 	//last = NULL;
 	//previous = NULL;
+	size--;
 	delete current;
     }
     //found frame to delete 
     else if (current->frameNum == frameID){ 
 	previous->next = current->next;
+	size--;		
 	delete current;
     }
     //frame not found!!
     else if (current==last && current->frameNum != frameID){
 	printf("frame not found in list");
-	break;
     }
     //traversing list in search of frame to delete
     else{
    	 previous = current;
    	 current = current->next;
     }
-    
-    
-
+    }
 
 }
 //end changes made by Stephen Mader 

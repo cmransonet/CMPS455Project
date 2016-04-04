@@ -18,10 +18,15 @@ Interrupt *interrupt;			// interrupt status
 Statistics *stats;			// performance metrics
 Timer *timer;				// the hardware timer device,
 					// for invoking context switches
+
+Thread * invertedPageTable;
+
+
 int threadChoice;
 int memChoice;
 int swapChoice;
 bool pageFlag;
+List* PageList; // Swap in and out pages
 
 BitMap * memMap;
 
@@ -129,7 +134,10 @@ Initialize(int argc, char **argv)
 			swapChoice = 0;
 		else
 			swapChoice = atoi(*(argv+1));
-		//printf("swapChoice = %i\n", swapChoice);
+		// set default to 0 if invalid argument
+		if (swapChoice > 2 || swapChoice < 0)
+			swapChoice = 0;
+		printf("swapChoice = %i\n", swapChoice);
 		argCount = 2;
 	}
 	//End code changes by Robert Knott
@@ -202,6 +210,14 @@ Initialize(int argc, char **argv)
 #ifdef NETWORK
     postOffice = new PostOffice(netname, rely, 10);
 #endif
+
+
+
+// Begin List initialization
+  invertedPageTable = new *int[numPhysPages];
+// End list initialization
+
+
 }
 
 //----------------------------------------------------------------------

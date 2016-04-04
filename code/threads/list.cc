@@ -31,6 +31,10 @@ ListElement::ListElement(void *itemPtr, int sortKey)
 {
      item = itemPtr;
      key = sortKey;
+//begin changes made by Stephen Mader 
+ //    previous = NULL;
+     frameNum = 0;
+//end changes made by Stephen Mader 
      next = NULL;	// assume we'll put it at the end of the list 
 }
 
@@ -42,8 +46,13 @@ ListElement::ListElement(void *itemPtr, int sortKey)
 
 List::List()
 { 
-    first = last = NULL; 
+    first = last = NULL;
+//begin changes made by Stephen Mader
+//    previous = NULL;
+ //   frameNum = 0; 
+//end changes made by Stephen Mader 
 	size = 0;
+	
 }
 
 //----------------------------------------------------------------------
@@ -78,12 +87,20 @@ void
 List::Append(void *item)
 {
     ListElement *element = new ListElement(item, 0);
+//begin changes made by Stephen Mader
+	element->frameNum=size;
 	size++;
+//end changes made by Stephen Mader
 
     if (IsEmpty()) {		// list is empty
 	first = element;
 	last = element;
     } else {			// else put it after last
+//begin changes made by Stephen Mader
+//probably uneccessary as well
+//	previous = last;
+//	previous->next = element; 	
+//end changes made by Stephen Mader 	
 	last->next = element;
 	last = element;
     }
@@ -239,4 +256,64 @@ List::SortedRemove(int *keyPtr)
     delete element;
     return thing;
 }
+
+//begin changes made by Stephen Mader
+void //*may need idk 
+List::DeleteRandom(int frameID)
+{
+    ListElement *current = first;
+    ListElement *previous = NULL;
+
+	
+if (!IsEmpty()){ 		//list is null
+
+	bool found = FALSE;	
+	while(current != NULL) {
+      	    if (current->frameNum != frameID) {
+	   	 previous = current;
+	   	 current = current->next;
+	    }
+	    else {
+		previous->next = current->next;
+		size--;		
+		delete current;
+		found = TRUE;
+	    }
+	
+	/*    if (first == last && current->frameNum == frameID) {	// list had one item, now has none 
+		first = NULL;
+		last = NULL;
+		//previous = NULL;
+		size--;
+		delete current;
+		break;
+	    }
+	    //found frame to delete 
+	    else if (current->frameNum == frameID){ 
+		previous->next = current->next;
+		size--;		
+		delete current;
+		break;
+	    }
+	    //frame not found!!
+	    else if (current==last && current->frameNum != frameID){
+		printf("frame not found in list");
+		break;
+	    }
+	    //traversing list in search of frame to delete
+	    else{
+	   	 previous = current;
+	   	 current = current->next;
+	    }
+         */
+	}
+
+         if (!found)
+		printf("frame not found in list");
+
+    }
+
+}
+//end changes made by Stephen Mader 
+
 
