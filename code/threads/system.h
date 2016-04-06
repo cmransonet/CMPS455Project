@@ -34,10 +34,12 @@ extern Timer *timer;				// the hardware alarm clock
 extern int threadChoice;
 extern int memChoice;
 extern bool pageFlag;
-//Begin code changes by Ben Matkin and Stephen Mader
+//Begin code changes by Ben Matkin and Stephen Mader and Robert Knott
 extern List* PageList; // Swap in and out pages
-extern Thread * invertedPageTable;
-//End code changes by Ben Matkin and Stephen Mader
+extern int * invertedPageTable[31]; // 31 = NumPhysPages - 1
+extern int iptId;
+extern int threadCount;
+//End code changes by Ben Matkin and Stephen Mader and Robert Knott
 extern BitMap *memMap;				//Bitmap to keep track of memory use
 
 

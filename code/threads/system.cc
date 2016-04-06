@@ -19,8 +19,9 @@ Statistics *stats;			// performance metrics
 Timer *timer;				// the hardware timer device,
 					// for invoking context switches
 
-Thread * invertedPageTable;
-
+int * invertedPageTable[31];
+int iptId = 0;
+int threadCount = 0;
 
 int threadChoice;
 int memChoice;
@@ -214,7 +215,7 @@ Initialize(int argc, char **argv)
 
 
 // Begin List initialization
-  invertedPageTable = new *int[numPhysPages];
+  //invertedPageTable = *int[numPhysPages];
 // End list initialization
 
 

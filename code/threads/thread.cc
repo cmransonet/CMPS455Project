@@ -41,9 +41,10 @@ Thread::Thread(char* threadName)
 #ifdef USER_PROGRAM
     space = NULL;
 	parent = NULL;
-	ID = 0;
+	ID = threadCount;
 	killNewChild = false;
 	isJoined = false;
+	threadCount++;
 #endif
 }
 
@@ -62,7 +63,7 @@ Thread::Thread(char* threadName)
 Thread::~Thread()
 {
     //DEBUG('t', "Deleting thread \"%i\"\n", ID);
-
+    threadCount--;
     ASSERT(this != currentThread);
     if (stack != NULL)
 	DeallocBoundedArray((char *) stack, StackSize * sizeof(int));
