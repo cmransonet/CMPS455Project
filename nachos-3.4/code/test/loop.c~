@@ -1,0 +1,15 @@
+#include "syscall.h"
+
+int main()
+{
+	int x = 20;
+
+	Exec("../test/loop");
+	Exec("../test/loop");	x += 10;
+	Exec("../test/loop");
+	
+	if (x == 30)
+		x -= 30;
+	
+	Exit(x);
+}

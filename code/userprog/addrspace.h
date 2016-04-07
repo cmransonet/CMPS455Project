@@ -17,6 +17,7 @@
 #include "filesys.h"
 #include "noff.h"
 
+
 #define UserStackSize		1024 	// increase this as necessary!
 
 class AddrSpace {
@@ -71,8 +72,6 @@ class AddrSpace {
    		pageTable[vpage].valid = set;
    	};
    	//End code changes by Ryan Mazerole
-
-     bool UpdateIPT();
 
   private:
   	// Begin code changes by Chet Ransonet

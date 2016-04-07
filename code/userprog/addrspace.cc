@@ -18,7 +18,6 @@
 #include "copyright.h"
 #include "system.h"
 #include "addrspace.h"
-
 //#include "noff.h" //moved to addrspace.h - Chet
 
 extern int swapChoice;
@@ -62,9 +61,6 @@ SwapHeader (NoffHeader *noffH)
 
 AddrSpace::AddrSpace(OpenFile *executable)
 {
-
-	// LIST Initialized here
-	 List* PageList = new List();   
 	// Begin code changes by Chet Ransonet
 	file = executable;
 
@@ -144,31 +140,8 @@ AddrSpace::AddrSpace(OpenFile *executable)
 		//Take the global bitmap and set the relevant chunks
 		//to indicate that the memory is in use
 		//memMap->Mark(i + startPage);
-		
-		// Begin code changes by Ben Matkin and Stephen mader
-		// Load page into PageList
-		//PageList->Append(i);
-		// End code changes by Ben Matkin and Stephen Mader
     }
 	
-	/*
-    int * threadPointer = (int*)currentThread;
-    printf("Current thread id = %i\n", currentThread->getID());
-    printf("ThreadPointer = %i\n", threadPointer);
-    Thread * testThread = (Thread*) threadPointer;
-	printf("Test Thread Id %i\n", testThread->getID());
-    bool iptPositionFound = FALSE;
-    for(i=0; i <= NumPhysPages; i++) {
-	if (invertedPageTable[i] == NULL) { // First available position to add thread
-		printf("Iterator i = %i\n", i);
-		invertedPageTable[i] = threadPointer;
-		iptPositionFound = TRUE;
-		break;
-	}
-    }
-    if (!iptPositionFound)
-      printf("Unable to find free space in IPT Table. How did we get here. :( \n");
-*/
 	//memMap->Print();	// Useful!
 
 
@@ -202,19 +175,49 @@ AddrSpace::AddrSpace(OpenFile *executable)
 */
 }
 
+//Begin code changes by Ben Matkin
+void loadThreadIntoIPT(int virtualPageNum)
+{
+ 	//Load page into IPT
+	int processID = currentThread->getID();
+	int * threadPointer = (int *) currentThread;
+	bool loadedIPT = FALSE;
+	Thread * testThread = (Thread *) threadPointer;
+	for (int i = 0; i < NumPhysPages - 1; i++) {
+		//printf("Iterator - %d\n", i);
+		if ( ipt[i] == NULL) {
+			ipt[i] = threadPointer;
+			loadedIPT = TRUE;
+			break;
+		}
+	}
+
+	if (loadedIPT)
+		printf("Process %i request VPN %i.\n", processID, virtualPageNum );
+	else 
+		printf("FAILURRREEEE\n");
+
+}
+//End code changes by Ben Matkin
+
+
 // Begin code changes by Chet Ransonet
 
 // called in the case of a PageFaultException
 // loads code and data into a free physical page if there is one
 void AddrSpace::loadPage(int badVAddr)
 {	
+	printf("\nPage Fault: \n");
 
- 	
 	int virtualPage = badVAddr / PageSize, physPage;
 	char * data = new char[PageSize];
 	unsigned int pageStart, offset, size; //modifiers for copying data into memory
+	bool loadedIPT = FALSE;
 	
-	UpdateIPT();	
+   	loadThreadIntoIPT(virtualPage);
+
+	printf("Page availability before adding the process: \n");
+	memMap->Print();	
 
 	physPage = memMap->Find(); // select a physical page not in use
 	if (physPage == -1) //if no page was found, swap out a page
@@ -224,19 +227,11 @@ void AddrSpace::loadPage(int badVAddr)
 			printf("Out of memory, swapping pages using FIFO page replacement\n");
 			//physPage =   //select a physical page to swap out and replace
 			//SwapOut(physPage);
-		//Begin changes by Ben Matkin and Stephen Mader
-			//physPage = PageList->Remove();
-			//SwapOut(physPage);
-		//End changes by Ben Matkin and Stephen Mader
-
 		}
 		else if (swapChoice == 2) // Random
 		{
 			printf("Out of memory, swapping pages using Random page replacement\n");
-		//Begin changes by Ben Matkin and Stephen Mader
-			physPage = Random() % NumPhysPages - 1; // 32 - 1;
-			PageList->DeleteRandom(physPage);
-		//End changes by Ben Matkin and Stephen Mader
+			physPage = Random() % 32 - 1;
 			Swapout(physPage);
 		}
 		else // default
@@ -245,19 +240,20 @@ void AddrSpace::loadPage(int badVAddr)
 			currentThread->Finish(); 
 		}
 	}	
+	printf("Assigning frame %i \n", physPage);
 	pageTable[virtualPage].physicalPage = physPage;
 	
+		printf("Page availability after adding the process: ");
 	memMap->Print();
-	
 	//debugging
-	printf("page that faulted: %i\nphysical page selected: %i, \nswapchoice %i\n", virtualPage, physPage, swapChoice);
+	printf("page that faulted: %i\nphysical page selected: %i\n", virtualPage, physPage);
 	
 	bzero(machine->mainMemory + PageSize * physPage, PageSize);
 	//bzero(data, PageSize);
 	
 	pageStart = 0; //starting place to load in code/data
 	offset = 0;	//modifies the location we're reading from
-	
+
 	// code segment
 	if (noffH.code.size > 0)
 	{
@@ -268,7 +264,6 @@ void AddrSpace::loadPage(int badVAddr)
 		
 		// set size of data to be copied
 		size = PageSize - pageStart;
-
 		if (noffH.code.virtualAddr + noffH.code.size < (virtualPage+1) * PageSize)
 			size -= (virtualPage) * PageSize - (noffH.code.virtualAddr + noffH.code.size);
 			
@@ -316,7 +311,8 @@ void AddrSpace::loadPage(int badVAddr)
 	
 	pageTable[virtualPage].valid = true;
 	pageTable[virtualPage].dirty = false;
-    
+
+	
     return;
 }
 
@@ -353,7 +349,7 @@ AddrSpace::~AddrSpace()
 				memMap->Clear(pageTable[i].physicalPage);
 		}
 		delete pageTable;
-
+		
 		memMap->Print();
 	}
 	
@@ -495,35 +491,3 @@ bool AddrSpace::Swapout(int frame){
 	return true;
 }
 //End code changes by Ryan Mazerole
-
-
-
-
-//Begin code by Ben Matkin, Stephen Mader, and Robert Knott
-/*
-Updates IPT via current thread. Returns true on success, false on failue (no space in IPT)
-*/
-bool AddrSpace::UpdateIPT()
-{
-    // Assign pointer to current thread
-    int * threadPointer = (int*)currentThread;
-    bool iptPositionFound = FALSE;
-    Thread * testThread;
-    printf("Current thread id = %i\n", currentThread->getID());
-    printf("ThreadPointer = %i\n", threadPointer);
-    testThread = (Thread*) threadPointer;
-    printf("Test Thread Id %i\n", testThread->getID());
-
-    for(int i=0; i <= NumPhysPages; i++) {
-	if (invertedPageTable[i] == NULL) { // First available position to add thread
-		printf("Iterator i = %i\n", i);
-		invertedPageTable[i] = threadPointer;
-		iptPositionFound = TRUE;
-		break;
-	}
-    }
-    if (!iptPositionFound) 
-      printf("Unable to find free space in IPT Table. How did we get here. :( \n");
-    return iptPositionFound;
-}
-//End code by Ben Matkin, Stephen Mader, and Robert Knott

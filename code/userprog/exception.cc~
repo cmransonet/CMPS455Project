@@ -82,11 +82,16 @@ Thread* getID(int toGet)	// Goes through the list of active threads and returns 
 		return NULL;
 	else return toReturn;
 }
+
+
+
 	
 void processCreator(int arg)	// Used when a process first actually runs, not when it is created.
  {
 	currentThread->space->InitRegisters();		// set the initial register values
     currentThread->space->RestoreState();		// load page table register
+
+
 	
 	if (threadToBeDestroyed != NULL){
 		delete threadToBeDestroyed;
@@ -191,7 +196,7 @@ ExceptionHandler(ExceptionType which)
 					i++;
 					if(!machine->ReadMem(fileAddress,1,&j))return;
 				}
-				StartProcess(filename);
+				
 				printf("Attempting to open file %s\n", filename);
 				
 				// Open File
@@ -219,6 +224,7 @@ ExceptionHandler(ExceptionType which)
 					activeThreads->Append(execThread);	// Put it on the active list.
 					machine->WriteRegister(2, threadID);	// Return the thread ID as our Exec return variable.
 					threadID++;	// Increment the total number of threads.
+					loadThreadIntoIPT();
 					execThread->Fork(processCreator, 0);	// Fork it.
 				}
 				else	// If not...

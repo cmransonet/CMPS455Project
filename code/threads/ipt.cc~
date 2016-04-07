@@ -1,0 +1,53 @@
+// addrspace.cc 
+//	Routines to manage address spaces (executing user programs).
+//
+//	In order to run a user program, you must:
+//
+//	1. link with the -N -T 0 option 
+//	2. run coff2noff to convert the object file to Nachos format
+//		(Nachos object code format is essentially just a simpler
+//		version of the UNIX executable object code format)
+//	3. load the NOFF file into the Nachos file system
+//		(if you haven't implemented the file system yet, you
+//		don't need to do this last step)
+//
+// Copyright (c) 1992-1993 The Regents of the University of California.
+// All rights reserved.  See copyright.h for copyright notice and limitation 
+// of liability and disclaimer of warranty provisions.
+
+#include "copyright.h"
+
+/*
+IPT::IPT()
+{
+	// nothing
+
+}
+
+IPT::~IPT()
+{
+	delete threadPointers;
+
+}
+*/
+
+int IPT::getPage(int index) 
+{
+
+
+
+}
+
+bool IPT::addProcess(int * threadPointer)
+{
+    int i;
+    bool success = FALSE;
+    for (i = 0; i < NumPhysPages - 1; i++) {
+	if (threadPointers[i] == NULL) {
+		threadPointers[i] = threadPointer;
+		success = TRUE;
+	}
+    }
+	return success;
+
+}
