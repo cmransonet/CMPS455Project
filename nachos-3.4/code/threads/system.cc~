@@ -19,20 +19,30 @@ Statistics *stats;			// performance metrics
 Timer *timer;				// the hardware timer device,
 					// for invoking context switches
 
+
+//Begin code changes by Ben Matkin
+int * ipt[31];
+List * pageList;
+//End code changes by Ben Matkin
+int threadChoice;
+int memChoice;
+int swapChoice;
+bool pageFlag;
+
+BitMap * memMap;
+
 #ifdef FILESYS_NEEDED
 FileSystem  *fileSystem;
 #endif
 
+#ifdef USER_PROGRAM
+Machine *machine;	// user program memory and registers
+List* activeThreads;
+int threadID;
+#endif
+
 #ifdef FILESYS
 SynchDisk   *synchDisk;
-#endif
-
-#ifdef USER_PROGRAM	// requires either FILESYS or FILESYS_STUB
-Machine *machine;	// user program memory and registers
-#endif
-
-#ifdef USER_PROGRAM
-BitMap *bitmap;
 #endif
 
 #ifdef NETWORK
@@ -43,9 +53,6 @@ PostOffice *postOffice;
 // External definition, to allow us to take a pointer to this function
 extern void Cleanup();
 
-//Begin code changes by Chet Ransonet
-extern int task;
-//End code changes by Chet Ransonet
 
 //----------------------------------------------------------------------
 // TimerInterruptHandler
@@ -81,7 +88,6 @@ TimerInterruptHandler(int dummy)
 //	"argv" is an array of strings, one for each command line argument
 //		ex: "nachos -d +" -> argv = {"nachos", "-d", "+"}
 //----------------------------------------------------------------------
-
 void
 Initialize(int argc, char **argv)
 {
@@ -91,6 +97,7 @@ Initialize(int argc, char **argv)
 
 #ifdef USER_PROGRAM
     bool debugUserProg = FALSE;	// single step user program
+	pageFlag = false;
 #endif
 #ifdef FILESYS_NEEDED
     bool format = FALSE;	// format disk
@@ -115,81 +122,35 @@ Initialize(int argc, char **argv)
 						// number generator
 	    randomYield = TRUE;
 	    argCount = 2;
+	} else if (!strcmp(*argv, "-A")) {
+	    if(*(argv+1) == NULL)
+			threadChoice = -1;
+	    else
+			threadChoice = atoi(*(argv+1));
+	    argCount = 2;
 	} 
-	//Begin code changes by Chet Ransonet
-	// Task Starter
-	else if (!strcmp(*argv, "-A")) 
-	{		
-		// need to check if only -A is entered!!
-		if (argc < 2)
-			printf("Error: Invalid input.");
-
-		else if (!strcmp(*(argv + 1), "1"))
-			task = 1;
-
-		else if (!strcmp(*(argv + 1), "2"))
-			task = 2;
-
-		else if (!strcmp(*(argv + 1), "3"))
-			task = 3;
-
-		else if (!strcmp(*(argv + 1), "4"))
-			task = 4;
-		
-		else if (!strcmp(*(argv + 1), "5"))
-			task = 5;
-
-		else if (!strcmp(*(argv + 1), "6"))
-			task = 6;
-		
+	//Begin code changes by Robert Knott
+	else if (!strcmp(*argv, "-V")) {
+		if (*(argv+1) == NULL)
+			swapChoice = 0;
 		else
-		{
-			printf("Error: Invalid input.\n");
-			task = 0;
-		}
-		
+			swapChoice = atoi(*(argv+1));
+		//printf("swapChoice = %i\n", swapChoice);
 		argCount = 2;
 	}
-	else if (!strcmp(*argv, "-x")) 
-	{
-		if (argc < 2)
-		{
-			task = -1;
-			printf("Error: Invalid input.\n");
-		}	
-		else
-		{
-			task = 1; // default to first fit
-			argCount = 2;
-		}
+	//End code changes by Robert Knott
+	else if (!strcmp(*argv, "-M")) {
+	    if(*(argv+1) == NULL)
+			memChoice = 1;
+	    else
+			memChoice = atoi(*(argv+1));
+	    argCount = 2;
 	}
-	else if (!strcmp(*argv, "-M")) 
-	{
-		if (argc < 2)
-		
-			printf("Error: Invalid input.\n");
-		else if (!strcmp(*(argv + 1), "1"))
-			task = 1; // use first fit
-
-		else if (!strcmp(*(argv + 1), "2"))
-			task = 2; // use best fit
-
-		else if (!strcmp(*(argv + 1), "3"))
-			task = 3; // use worst fit
-		
-
-		argCount = 2;
-	}		
-	else
-	{
-		printf("Error: Invalid command.\n");
-	}
-
-	//End code changes by Chet Ransonet
-
 #ifdef USER_PROGRAM
 	if (!strcmp(*argv, "-s"))
 	    debugUserProg = TRUE;
+	if(!strcmp(*argv, "-E"))
+		pageFlag = true;
 #endif
 #ifdef FILESYS_NEEDED
 	if (!strcmp(*argv, "-f"))
@@ -216,6 +177,8 @@ Initialize(int argc, char **argv)
 	timer = new Timer(TimerInterruptHandler, 0, randomYield);
 
     threadToBeDestroyed = NULL;
+	
+	
 
     // We didn't explicitly allocate the current thread we are running in.
     // But if it ever tries to give up the CPU, we better have a Thread
@@ -225,15 +188,15 @@ Initialize(int argc, char **argv)
 
     interrupt->Enable();
     CallOnUserAbort(Cleanup);			// if user hits ctl-C
-    
+	
 #ifdef USER_PROGRAM
-    machine = new Machine(debugUserProg);	// this must come first
-#endif
+	memMap = new BitMap(NumPhysPages);
+	machine = new Machine(debugUserProg);
 
-#ifdef USER_PROGRAM
-	bitmap = new BitMap(NumPhysPages);
-#endif
 
+	activeThreads = new List();	// Make the active threads list.
+	threadID = 1; // Initialize our total number of active threads.
+#endif
 #ifdef FILESYS
     synchDisk = new SynchDisk("DISK");
 #endif
@@ -261,6 +224,8 @@ Cleanup()
     
 #ifdef USER_PROGRAM
     delete machine;
+	delete activeThreads;
+	delete memMap;
 #endif
 
 #ifdef FILESYS_NEEDED

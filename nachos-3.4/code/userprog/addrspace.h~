@@ -17,6 +17,7 @@
 #include "filesys.h"
 #include "noff.h"
 
+
 #define UserStackSize		1024 	// increase this as necessary!
 
 class AddrSpace {
@@ -41,6 +42,7 @@ class AddrSpace {
     void DestroySwapFile();
 
 	bool Swapin(int page, int frame);
+	
    	bool Swapout(int frame);
    	
    	void savePageTableEntry(TranslationEntry entry, int virtualPage){
@@ -52,6 +54,7 @@ class AddrSpace {
    	};
    	
    	int getPageNumber(int frame){
+		printf("Running get page number in addrspace.h \nFrame = %d\n numPages = %i\n ", frame);
    		for(int i = 0; i < numPages; i++){
    				if(pageTable[i].physicalPage == frame && pageTable[i].valid == true){
    					return i;

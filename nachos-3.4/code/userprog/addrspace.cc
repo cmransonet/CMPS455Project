@@ -175,24 +175,70 @@ AddrSpace::AddrSpace(OpenFile *executable)
 */
 }
 
+//Begin code changes by Ben Matkin
+void loadThreadIntoIPT(int virtualPageNum)
+{
+ 	//Load page into IPT
+	int processID = currentThread->getID();
+	int * threadPointer = (int *) currentThread;
+	bool loadedIPT = FALSE;
+	Thread * testThread = (Thread *) threadPointer;
+	for (int i = 0; i < NumPhysPages - 1; i++) {
+		//printf("Iterator - %d\n", i);
+		if ( ipt[i] == NULL) {
+			ipt[i] = threadPointer;
+			loadedIPT = TRUE;
+			break;
+		}
+	}
+
+	if (loadedIPT)
+		printf("Process %i request VPN %i.\n", processID, virtualPageNum );
+	else 
+		printf("FAILURRREEEE\n");
+
+}
+//End code changes by Ben Matkin
+
+
 // Begin code changes by Chet Ransonet
 
 // called in the case of a PageFaultException
 // loads code and data into a free physical page if there is one
+
+
+
 void AddrSpace::loadPage(int badVAddr)
 {	
+	printf("\nPage Fault: \n");
+
 	int virtualPage = badVAddr / PageSize, physPage;
 	char * data = new char[PageSize];
 	unsigned int pageStart, offset, size; //modifiers for copying data into memory
+	bool loadedIPT = FALSE;
 	
+   	loadThreadIntoIPT(virtualPage);
+
+	printf("Page availability before adding the process: \n");
+	memMap->Print();	
+
 	physPage = memMap->Find(); // select a physical page not in use
+	printf("Phys page initial = %d\n", physPage);
+	if ((physPage + 1) % 3 == 0 )
+		physPage = -1;
 	if (physPage == -1) //if no page was found, swap out a page
 	{
 		if(swapChoice == 1) // FIFO
 		{
+			//Begin code changes by Ben Matkin and Stephen Mader
 			printf("Out of memory, swapping pages using FIFO page replacement\n");
-			//physPage =   //select a physical page to swap out and replace
-			//SwapOut(physPage);
+			//select a physical page to swap out and replace
+			//pageList->Append((int *) physPage); // Store virtual page, though mainly just maintaining index cue
+			physPage = (int) pageList->Remove(); // Take one page off front of list
+			printf("physPage = %d \n", physPage);	
+			Swapout(physPage);
+			//End code changes by Ben Matkin and Stephen Mader
+			
 		}
 		else if (swapChoice == 2) // Random
 		{
@@ -205,11 +251,15 @@ void AddrSpace::loadPage(int badVAddr)
 			printf("Out of memory, virtual memory scheme not selected, exiting...\n");
 			currentThread->Finish(); 
 		}
+	}
+	else {
+		pageList->Append((int *) physPage); // Store virtual page, though mainly just maintaining index cue
 	}	
+	printf("Assigning frame %i \n", physPage);
 	pageTable[virtualPage].physicalPage = physPage;
 	
+		printf("Page availability after adding the process: ");
 	memMap->Print();
-	
 	//debugging
 	printf("page that faulted: %i\nphysical page selected: %i\n", virtualPage, physPage);
 	
@@ -218,7 +268,7 @@ void AddrSpace::loadPage(int badVAddr)
 	
 	pageStart = 0; //starting place to load in code/data
 	offset = 0;	//modifies the location we're reading from
-	
+
 	// code segment
 	if (noffH.code.size > 0)
 	{
@@ -276,7 +326,8 @@ void AddrSpace::loadPage(int badVAddr)
 	
 	pageTable[virtualPage].valid = true;
 	pageTable[virtualPage].dirty = false;
-    
+
+	
     return;
 }
 
@@ -313,7 +364,7 @@ AddrSpace::~AddrSpace()
 				memMap->Clear(pageTable[i].physicalPage);
 		}
 		delete pageTable;
-
+		
 		memMap->Print();
 	}
 	
@@ -424,7 +475,7 @@ bool AddrSpace::Swapin(int page, int frame){
 
 bool AddrSpace::Swapout(int frame){
 	
-	ASSERT(frame >= 0 && frame < NumPhysPages);
+	//ASSERT(frame >= 0 && frame < NumPhysPages);
 	
 	//AddrSpace * space = currentThread->space;
 	

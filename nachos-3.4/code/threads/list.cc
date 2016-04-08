@@ -89,6 +89,8 @@ List::Append(void *item)
     }
 }
 
+int List::getSize(){ return size;}
+
 //----------------------------------------------------------------------
 // List::Prepend
 //      Put an "item" on the front of the list.
@@ -239,4 +241,5 @@ List::SortedRemove(int *keyPtr)
     delete element;
     return thing;
 }
+
 

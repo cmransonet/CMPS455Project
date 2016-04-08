@@ -17,6 +17,7 @@
 #include "filesys.h"
 #include "noff.h"
 
+
 #define UserStackSize		1024 	// increase this as necessary!
 
 class AddrSpace {
@@ -53,6 +54,7 @@ class AddrSpace {
    	};
    	
    	int getPageNumber(int frame){
+		printf("Running get page number in addrspace.h \nFrame = %d\n numPages = %d\n ", frame);
    		for(int i = 0; i < numPages; i++){
    				if(pageTable[i].physicalPage == frame && pageTable[i].valid == true){
    					return i;

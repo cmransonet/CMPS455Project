@@ -82,11 +82,16 @@ Thread* getID(int toGet)	// Goes through the list of active threads and returns 
 		return NULL;
 	else return toReturn;
 }
+
+
+
 	
 void processCreator(int arg)	// Used when a process first actually runs, not when it is created.
  {
 	currentThread->space->InitRegisters();		// set the initial register values
     currentThread->space->RestoreState();		// load page table register
+
+
 	
 	if (threadToBeDestroyed != NULL){
 		delete threadToBeDestroyed;

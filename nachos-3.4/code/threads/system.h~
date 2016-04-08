@@ -15,7 +15,8 @@
 #include "interrupt.h"
 #include "stats.h"
 #include "timer.h"
-
+#include "bitmap.h"
+#include "synch.h"
 
 
 // Initialization and cleanup routines
@@ -30,12 +31,22 @@ extern Scheduler *scheduler;			// the ready list
 extern Interrupt *interrupt;			// interrupt status
 extern Statistics *stats;			// performance metrics
 extern Timer *timer;				// the hardware alarm clock
+extern int threadChoice;
+extern int memChoice;
+extern bool pageFlag;
+
+//Begin code changes by Ben Matkin
+extern int * ipt[31];
+extern List * pageList;
+//End code changes by Ben Matkin
+
+extern BitMap *memMap;				//Bitmap to keep track of memory use
 
 #ifdef USER_PROGRAM
 #include "machine.h"
 extern Machine* machine;	// user program memory and registers
-#include "bitmap.h"
-extern BitMap * bitmap;
+extern List* activeThreads;	// active thread list for process management
+extern int threadID;	// unique process id
 #endif
 
 #ifdef FILESYS_NEEDED 		// FILESYS or FILESYS_STUB 
