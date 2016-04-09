@@ -11,13 +11,11 @@
  */
 
 #include "syscall.h"
-#include "matmult.c"
 
 int
 main()
 {
-	Exec(matmult);
-	
-    Halt();
+    //Join(Exec("../test/sort"));
+	//Exit(0);
     /* not reached */
 }

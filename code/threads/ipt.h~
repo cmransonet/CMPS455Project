@@ -1,0 +1,18 @@
+#pragma once
+
+class IPT {
+  public:
+    IPT();	
+
+    ~IPT();			
+
+    int getPage(int index);
+    bool addProcess(int * threadPointer);
+
+
+
+  private:
+	int * threadPointers[31]; //numphyspages -1 
+  
+};
+

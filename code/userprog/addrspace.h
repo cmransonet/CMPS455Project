@@ -17,6 +17,7 @@
 #include "filesys.h"
 #include "noff.h"
 
+
 #define UserStackSize		1024 	// increase this as necessary!
 
 class AddrSpace {
@@ -34,6 +35,8 @@ class AddrSpace {
     
     // Begin code changes by Chet Ransonet
     void loadPage(int badVAddrReg);
+    int getNumPages()
+    	{return numPages;};
     // End code changes by Chet Ransonet
     
     //Begin code changes by Ryan Mazerole
@@ -48,12 +51,19 @@ class AddrSpace {
    		pageTable[virtualPage] = entry;
    	};
    	
-   	TranslationEntry pageTableEntry(int virtualPage){
-   		return pageTable[virtualPage];
+   	TranslationEntry pageTableEntry(int physPage)
+   	{
+   		for(unsigned int i=0; i < numPages; i++)
+   		{
+   			if(pageTable[i].physicalPage == physPage)
+   				return pageTable[i];
+   		}
+   		ASSERT(false); // we should not be reaching this assert
    	};
    	
    	int getPageNumber(int frame){
-   		for(int i = 0; i < numPages; i++){
+		//printf("Running get page number in addrspace.h \nFrame = %d\n numPages = %d\n ", frame);
+   		for(unsigned int i = 0; i < numPages; i++){
    				if(pageTable[i].physicalPage == frame && pageTable[i].valid == true){
    					return i;
    				}

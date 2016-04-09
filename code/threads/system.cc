@@ -18,6 +18,12 @@ Interrupt *interrupt;			// interrupt status
 Statistics *stats;			// performance metrics
 Timer *timer;				// the hardware timer device,
 					// for invoking context switches
+
+
+//Begin code changes by Ben Matkin
+Thread * ipt[32];
+List * pageList = new List();
+//End code changes by Ben Matkin
 int threadChoice;
 int memChoice;
 int swapChoice;

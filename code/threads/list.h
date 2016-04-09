@@ -28,7 +28,6 @@ class ListElement {
    public:
      ListElement(void *itemPtr, int sortKey);	// initialize a list element
 
-     ListElement *next;		// next element on list, 
 				// NULL if this is the last
      int key;		    	// priority, for a sorted list
      void *item; 	    	// pointer to item on the list
@@ -56,7 +55,7 @@ class List {
     // Routines to put/get items on/off list in order (sorted by key)
     void SortedInsert(void *item, int sortKey);	// Put item into list
     void *SortedRemove(int *keyPtr); 	  	// Remove first item from list
-	int getSize(){return size;}
+	int getSize();
 
   private:
     ListElement *first;  	// Head of the list, NULL if list is empty
