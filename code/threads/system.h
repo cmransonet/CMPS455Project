@@ -36,6 +36,8 @@ extern int threadChoice;
 extern int memChoice;
 extern bool pageFlag;
 
+extern Semaphore ** pageLock;
+
 //Begin code changes by Ben Matkin
 extern Thread * ipt[32];
 extern List * pageList;

@@ -23,6 +23,10 @@
 void
 StartProcess(char *filename)
 {
+	pageLock = new Semaphore*[32];
+	for(int j = 0; j < 32; j++)
+		pageLock[j] = new Semaphore((char*)'A', 1);
+	
     OpenFile *executable = fileSystem->Open(filename);
 	
     AddrSpace *space;

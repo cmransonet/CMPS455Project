@@ -19,6 +19,9 @@ Statistics *stats;			// performance metrics
 Timer *timer;				// the hardware timer device,
 					// for invoking context switches
 
+//Begin code changes by Chet Ransonet
+Semaphore ** pageLock;
+//End code changes by Chet Ransonet
 
 //Begin code changes by Ben Matkin
 Thread * ipt[32];

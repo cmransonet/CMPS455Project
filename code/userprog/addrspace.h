@@ -37,6 +37,7 @@ class AddrSpace {
     void loadPage(int badVAddrReg);
     int getNumPages()
     	{return numPages;};
+    bool * swapped;
     // End code changes by Chet Ransonet
     
     //Begin code changes by Ryan Mazerole

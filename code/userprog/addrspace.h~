@@ -37,6 +37,7 @@ class AddrSpace {
     void loadPage(int badVAddrReg);
     int getNumPages()
     	{return numPages;};
+    int id;
     // End code changes by Chet Ransonet
     
     //Begin code changes by Ryan Mazerole
@@ -51,7 +52,7 @@ class AddrSpace {
    		pageTable[virtualPage] = entry;
    	};
    	
-   	TranslationEntry * pageTableEntry(int physPage)
+   	TranslationEntry pageTableEntry(int physPage)
    	{
    		for(unsigned int i=0; i < numPages; i++)
    		{

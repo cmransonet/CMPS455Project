@@ -37,7 +37,7 @@ extern int memChoice;
 extern bool pageFlag;
 
 //Begin code changes by Ben Matkin
-extern Thread * ipt;
+extern Thread * ipt[32];
 extern List * pageList;
 //End code changes by Ben Matkin
 
