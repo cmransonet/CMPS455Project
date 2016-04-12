@@ -34,12 +34,13 @@ extern Statistics *stats;			// performance metrics
 extern Timer *timer;				// the hardware alarm clock
 extern int threadChoice;
 extern int memChoice;
+extern int swapChoice;
 extern bool pageFlag;
 
 extern Semaphore ** pageLock;
 
 //Begin code changes by Ben Matkin
-extern Thread * ipt[32];
+extern Thread * ipt[NumPhysPages];
 extern List * pageList;
 //End code changes by Ben Matkin
 

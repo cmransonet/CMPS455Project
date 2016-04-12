@@ -24,7 +24,7 @@ Semaphore ** pageLock;
 //End code changes by Chet Ransonet
 
 //Begin code changes by Ben Matkin
-Thread * ipt[32];
+Thread * ipt[NumPhysPages];
 List * pageList = new List();
 //End code changes by Ben Matkin
 int threadChoice;

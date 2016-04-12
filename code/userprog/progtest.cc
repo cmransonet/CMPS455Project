@@ -23,8 +23,8 @@
 void
 StartProcess(char *filename)
 {
-	pageLock = new Semaphore*[32];
-	for(int j = 0; j < 32; j++)
+	pageLock = new Semaphore*[NumPhysPages];
+	for(int j = 0; j < NumPhysPages; j++)
 		pageLock[j] = new Semaphore((char*)'A', 1);
 	
     OpenFile *executable = fileSystem->Open(filename);
@@ -36,18 +36,19 @@ StartProcess(char *filename)
 	return;
     }
 	
+	/*
 	printf("Memory allocation method chosen: ");
 	if(memChoice == 1)
 		printf("First-fit.\n");
 	else if (memChoice == 2)
 		printf("Best-fit.\n");
 	else
-		printf("Worst-fit.\n");
+		printf("Worst-fit.\n");*/
 		
 	printf("Memory scheme chosen: ");
-	if(memChoice == 1)
+	if(swapChoice == 1)
 		printf("FIFO Page Replacement.\n");
-	else if (memChoice == 2)
+	else if (swapChoice == 2)
 		printf("Random Page Replacement.\n");
 	else
 		printf("Demand Paging Only. (default)\n");

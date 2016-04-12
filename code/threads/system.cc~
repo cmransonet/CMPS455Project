@@ -21,8 +21,6 @@ Timer *timer;				// the hardware timer device,
 
 //Begin code changes by Chet Ransonet
 Semaphore ** pageLock;
-for(int j = 0; j < numPhilos; ++j)
-	pageLock[j] = new Semaphore((char*)'A', 1);
 //End code changes by Chet Ransonet
 
 //Begin code changes by Ben Matkin

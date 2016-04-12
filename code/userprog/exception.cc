@@ -347,7 +347,7 @@ ExceptionHandler(ExceptionType which)
 	case PageFaultException :			
 		invalidPageAddr = machine->ReadRegister(BadVAddrReg);
 		
-		printf("PageFaultException! invalidPageAddr = %i\n", invalidPageAddr);
+		//printf("\nPageFaultException!\n");//invalidPageAddr = %i\n", invalidPageAddr);
 		
 		currentThread->space->loadPage(invalidPageAddr);
 		

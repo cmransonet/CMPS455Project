@@ -142,7 +142,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 		//memMap->Mark(i + startPage);
     }
 	
-	//memMap->Print();	// Useful!
+	//memMap->Print();
 
 
 /* Don't load into physical memory yet!    
@@ -214,10 +214,11 @@ void AddrSpace::loadPage(int badVAddr)
 {	
 	printf("\nPage Fault: \n");
 
+	stats->numPageFaults++;
+
 	int virtualPage = badVAddr / PageSize, physPage;
-	char * data = new char[PageSize];
 	unsigned int pageStart, offset, size; //modifiers for copying data into memory
-	bool loadedIPT = FALSE;
+	bool lock = false;
 	
    	//loadThreadIntoIPT(virtualPage);
 
@@ -225,19 +226,15 @@ void AddrSpace::loadPage(int badVAddr)
 	memMap->Print();	
 
 	physPage = memMap->Find(); // select a physical page not in use
-	printf("Phys page initial = %d\n", physPage);
-	
+	//printf("Phys page initial = %d\n", physPage);
 	if (physPage == -1) //if no page was found, swap out a page
 	{
 		if(swapChoice == 1) // FIFO
 		{
 			//Begin code changes by Ben Matkin and Stephen Mader
 			printf("Out of memory, swapping pages using FIFO page replacement\n");
-			//select a physical page to swap out and replace
-			//pageList->Append((int *) physPage); // Store virtual page, though mainly just maintaining index cue
-			physPage = (int) pageList->Remove(); // Take one page off front of list
-			printf("physPage = %d \n", physPage);	
-			//Swapout(physPage);
+			physPage = (int)pageList->Remove(); // Take one page off front of list
+			printf("physPage = %d \n", physPage);
 			//End code changes by Ben Matkin and Stephen Mader
 			
 		}
@@ -245,8 +242,7 @@ void AddrSpace::loadPage(int badVAddr)
 		{
 			printf("Out of memory, swapping pages using Random page replacement\n");
 			physPage = Random() % 32;
-			printf("physPage = %d \n", physPage);	
-			//Swapout(physPage);
+			//printf("physPage = %d \n", physPage);	
 		}
 		else // default
 		{
@@ -254,7 +250,7 @@ void AddrSpace::loadPage(int badVAddr)
 			ASSERT(false); 
 		}
 		
-		pageLock[physPage]->P();
+		
 	
 		if(!ipt[physPage]->space->Swapout(physPage))
 			return;
@@ -262,22 +258,22 @@ void AddrSpace::loadPage(int badVAddr)
 		printf("Process %i request VPN %i.\n", currentThread->getID(), virtualPage);
 		
 	}
-	//else 
-	//{
-	if(swapChoice == 2)
-		pageList->Append((int *) physPage); // Store virtual page, though mainly just maintaining index cue
-	//}
-	
+		if(swapChoice == 1)
+		{
+			pageList->Append((int *) physPage); // Store virtual page, though mainly just maintaining index cue
+			lock = true;
+			pageLock[physPage]->P();
+		}
 	ipt[physPage] = currentThread;
 		
-	printf("Assigning frame %i \n", physPage);
+	//printf("Assigning frame %i \n", physPage);
 	pageTable[virtualPage].physicalPage = physPage;
 	
 	printf("Page availability after adding the process: \n");
 	memMap->Print();
 	
 	//debugging
-	printf("page that faulted: %i\nphysical page selected: %i\n", virtualPage, physPage);
+	printf("Page that faulted: %i\nPhysical page selected: %i\n", virtualPage, physPage);
 	
 	if(!swapped[virtualPage])
 	{
@@ -331,16 +327,9 @@ void AddrSpace::loadPage(int badVAddr)
 			//file->ReadAt(data, size, noffH.initData.inFileAddr + offset);
 		}
 		
-		int charactersWritten;
-			char * written = machine->mainMemory + physPage * PageSize;
-		
-			charactersWritten = swapFile->WriteAt(written, PageSize, virtualPage * PageSize);
-		
-			if(charactersWritten != PageSize);
-				printf("charactersWritten != PageSize\n");
-		
-		delete[] data;
-		
+		char * data = machine->mainMemory + physPage * PageSize;
+		swapFile->WriteAt(data, PageSize, virtualPage * PageSize);
+
 		pageTable[virtualPage].valid = true;
 		pageTable[virtualPage].dirty = false;
 		
@@ -348,9 +337,11 @@ void AddrSpace::loadPage(int badVAddr)
 	}
 	else
 		Swapin(virtualPage, physPage);
-		
-	pageLock[physPage]->V();
-	
+	if(lock)
+	{
+		pageLock[physPage]->V();
+		lock = false;
+	}
     return;
 }
 
@@ -496,7 +487,7 @@ bool AddrSpace::Swapout(int frame)
 	{
 		if(pageTable[i].physicalPage == frame)
 		{
-			virtPage = i; printf("virtPage = %i\n", virtPage);
+			virtPage = i; //printf("virtPage = %i\n", virtPage);
 			break;
 		}
 	}

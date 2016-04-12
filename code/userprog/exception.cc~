@@ -224,7 +224,6 @@ ExceptionHandler(ExceptionType which)
 					activeThreads->Append(execThread);	// Put it on the active list.
 					machine->WriteRegister(2, threadID);	// Return the thread ID as our Exec return variable.
 					threadID++;	// Increment the total number of threads.
-					loadThreadIntoIPT();
 					execThread->Fork(processCreator, 0);	// Fork it.
 				}
 				else	// If not...
@@ -348,7 +347,7 @@ ExceptionHandler(ExceptionType which)
 	case PageFaultException :			
 		invalidPageAddr = machine->ReadRegister(BadVAddrReg);
 		
-		printf("PageFaultException! invalidPageAddr = %i\n", invalidPageAddr);
+		printf("\nPageFaultException!\n");//invalidPageAddr = %i\n", invalidPageAddr);
 		
 		currentThread->space->loadPage(invalidPageAddr);
 		
