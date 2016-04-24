@@ -17,8 +17,6 @@
 #include "timer.h"
 #include "bitmap.h"
 #include "synch.h"
-#include "list.h"
-
 
 // Initialization and cleanup routines
 extern void Initialize(int argc, char **argv); 	// Initialization,
@@ -34,15 +32,7 @@ extern Statistics *stats;			// performance metrics
 extern Timer *timer;				// the hardware alarm clock
 extern int threadChoice;
 extern int memChoice;
-extern int swapChoice;
 extern bool pageFlag;
-
-extern Semaphore ** pageLock;
-
-//Begin code changes by Ben Matkin
-extern Thread * ipt[NumPhysPages];
-extern List * pageList;
-//End code changes by Ben Matkin
 
 extern BitMap *memMap;				//Bitmap to keep track of memory use
 

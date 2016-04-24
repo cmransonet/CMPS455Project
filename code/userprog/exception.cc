@@ -29,8 +29,6 @@
 #include "addrspace.h"   // FA98
 #include "sysdep.h"   // FA98
 
-Lock *memLock = NULL;
-
 // begin FA98
 
 static int SRead(int addr, int size, int id);
@@ -82,16 +80,11 @@ Thread* getID(int toGet)	// Goes through the list of active threads and returns 
 		return NULL;
 	else return toReturn;
 }
-
-
-
 	
 void processCreator(int arg)	// Used when a process first actually runs, not when it is created.
  {
 	currentThread->space->InitRegisters();		// set the initial register values
     currentThread->space->RestoreState();		// load page table register
-
-
 	
 	if (threadToBeDestroyed != NULL){
 		delete threadToBeDestroyed;
@@ -113,10 +106,6 @@ ExceptionHandler(ExceptionType which)
 	int Result;
 	int i, j;
 	char *ch = new char [500];
-
-	// Begin code changes by Chet Ransonet
-	int invalidPageAddr;
-	// End code changes by Chet Ransonet
 
 	switch ( which )
 	{
@@ -180,15 +169,11 @@ ExceptionHandler(ExceptionType which)
 				
 				for(int m = 0; m < 100; m++)
 					filename[m] = NULL;
-					
-				printf("fileAddress = %i\n", fileAddress); //debug
-			
+
 				// Free up allocation space and get the file name
-				if(!machine->ReadMem(fileAddress,1,&j))
-					machine->ReadMem(fileAddress,1,&j); //return;
-				
+				if(!machine->ReadMem(fileAddress,1,&j))return;
 				i = 0;
-				
+
 				while(j != 0)
 				{
 					filename[i]=(char)j;
@@ -196,9 +181,6 @@ ExceptionHandler(ExceptionType which)
 					i++;
 					if(!machine->ReadMem(fileAddress,1,&j))return;
 				}
-				
-				printf("Attempting to open file %s\n", filename);
-				
 				// Open File
 				OpenFile *executable = fileSystem->Open(filename);
 				
@@ -213,8 +195,7 @@ ExceptionHandler(ExceptionType which)
 				// Calculate needed memory space
 				AddrSpace *space;
 				space = new AddrSpace(executable);
-				//delete executable;
-				
+				delete executable;
 				// Do we have enough space?
 				if(!currentThread->killNewChild)	// If so...
 				{
@@ -267,7 +248,7 @@ ExceptionHandler(ExceptionType which)
 				if(arg1 == 0)	// Did we exit properly?  If not, show an error message.
 					printf("Process %i exited normally!\n", currentThread->getID());
 				else
-					printf("ERROR: Process %i exited abnormally! (%i)\n", currentThread->getID(), arg1);
+					printf("ERROR: Process %i exited abnormally!\n", currentThread->getID());
 				
 				if(currentThread->space)	// Delete the used memory from the process.
 					delete currentThread->space;
@@ -342,20 +323,8 @@ ExceptionHandler(ExceptionType which)
 			delete currentThread->space;
 		currentThread->Finish();	// Delete the thread.
 		break;
-		
-	// Begin code changes by Chet Ransonet
-	case PageFaultException :			
-		invalidPageAddr = machine->ReadRegister(BadVAddrReg);
-		
-		//printf("\nPageFaultException!\n");//invalidPageAddr = %i\n", invalidPageAddr);
-		
-		currentThread->space->loadPage(invalidPageAddr);
-		
-		return;
-		
-	// End code changes by Chet Ransonet
 
-	default :
+		default :
 		//      printf("Unexpected user mode exception %d %d\n", which, type);
 		//      if (currentThread->getName() == "main")
 		//      ASSERT(FALSE);

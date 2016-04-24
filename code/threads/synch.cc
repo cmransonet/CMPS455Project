@@ -97,14 +97,58 @@ Semaphore::V()
     (void) interrupt->SetLevel(oldLevel);
 }
 
+//Begin code changes by Robert Knott and Chet Ransonet
+Lock::Lock(char* debugName) 
+{
+	name = debugName;
+	busy = false;
+	queue = new List;
+}
+
+Lock::~Lock() 
+{
+	delete queue;
+}
+
+void Lock::Acquire() 
+{
+	IntStatus oldLevel = interrupt->SetLevel(IntOff);
+	
+	if (busy)
+	{
+		queue->Append((void *)currentThread);
+		currentThread->Sleep();
+	}
+	else
+		busy = true;
+		
+	(void) interrupt->SetLevel(oldLevel);
+}
+
+void Lock::Release() 
+{
+	Thread *thread;
+	IntStatus oldLevel = interrupt->SetLevel(IntOff);
+
+	thread = (Thread *)queue->Remove();
+    if (thread != NULL && isHeldByCurrentThread())	
+   		scheduler->ReadyToRun(thread);
+	else
+		busy = false;
+
+	(void) interrupt->SetLevel(oldLevel);	
+}
+
+bool Lock::isHeldByCurrentThread()
+{
+	return currentThread == lockThread;
+}
+//Begin code changes by Robert Knott and Chet Ransonet
+
+
 // Dummy functions -- so we can compile our later assignments 
 // Note -- without a correct implementation of Condition::Wait(), 
 // the test case in the network assignment won't work!
-Lock::Lock(char* debugName) {}
-Lock::~Lock() {}
-void Lock::Acquire() {}
-void Lock::Release() {}
-
 Condition::Condition(char* debugName) { }
 Condition::~Condition() { }
 void Condition::Wait(Lock* conditionLock) { ASSERT(FALSE); }

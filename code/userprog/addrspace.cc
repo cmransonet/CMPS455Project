@@ -18,9 +18,7 @@
 #include "copyright.h"
 #include "system.h"
 #include "addrspace.h"
-//#include "noff.h" //moved to addrspace.h - Chet
-
-extern int swapChoice;
+#include "noff.h"
 
 //----------------------------------------------------------------------
 // SwapHeader
@@ -61,14 +59,10 @@ SwapHeader (NoffHeader *noffH)
 
 AddrSpace::AddrSpace(OpenFile *executable)
 {
-	// Begin code changes by Chet Ransonet
-	file = executable;
-	
-    //NoffHeader noffH;
-	// End code changes by Chet Ransonet
-    unsigned int i, size, counter;
+    NoffHeader noffH;
+    unsigned int i, size, pAddr, counter;
 	space = false;
-	
+
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
     if ((noffH.noffMagic != NOFFMAGIC) && 
 		(WordToHost(noffH.noffMagic) == NOFFMAGIC))
@@ -79,12 +73,8 @@ AddrSpace::AddrSpace(OpenFile *executable)
     size = noffH.code.size + noffH.initData.size + noffH.uninitData.size 
 			+ UserStackSize;	// we need to increase the size
 						// to leave room for the stack
-    numPages = divRoundUp(size, PageSize); 
+    numPages = divRoundUp(size, PageSize);
     size = numPages * PageSize;
-    
-	Swap(size + 6000);
-	//swapFile = fileSystem->Open(swapfilename);
-	swapped = new bool[numPages];
 
 	//Change this to reference the bitmap for free pages
 	//instead of total amount of pages
@@ -103,7 +93,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 		else
 			counter = 0;
 	}
-/*	
+	
 	DEBUG('a', "%i contiguous blocks found for %i pages\n", counter, numPages);
 
 	//If no memory available, terminate
@@ -113,7 +103,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 		currentThread->killNewChild = true;
 		return;
 	}
-*/
+
 	//If we get past the if statement, then there was sufficient space
 	space = true;
 
@@ -127,10 +117,8 @@ AddrSpace::AddrSpace(OpenFile *executable)
     for (i = 0; i < numPages; i++) {
 		pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
 		//pageTable[i].physicalPage = i;	//Replace with pageTable[i].physicalPage = i + startPage;
-		pageTable[i].physicalPage = -1; //i + startPage;
-		// Begin code changes by Chet Ransonet
-		pageTable[i].valid = FALSE;//TRUE;
-		// End code changes by Chet Ransonet
+		pageTable[i].physicalPage = i + startPage;
+		pageTable[i].valid = TRUE;
 		pageTable[i].use = FALSE;
 		pageTable[i].dirty = FALSE;
 		pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
@@ -139,13 +127,11 @@ AddrSpace::AddrSpace(OpenFile *executable)
 
 		//Take the global bitmap and set the relevant chunks
 		//to indicate that the memory is in use
-		//memMap->Mark(i + startPage);
+		memMap->Mark(i + startPage);
     }
 	
-	//memMap->Print();
-
-
-/* Don't load into physical memory yet!    
+	memMap->Print();	// Useful!
+    
 // zero out the entire address space, to zero the unitialized data segment 
 // and the stack segment
 //    bzero(machine->mainMemory, size); rm for Solaris
@@ -172,180 +158,8 @@ AddrSpace::AddrSpace(OpenFile *executable)
         executable->ReadAt(&(machine->mainMemory[noffH.initData.virtualAddr + pAddr]),
 			noffH.initData.size, noffH.initData.inFileAddr);
     }
-*/
+
 }
-
-//Begin code changes by Ben Matkin
-void loadThreadIntoIPT(int virtualPageNum)
-{
-
-/* //The problem with this function is that it's looking for an empty physical page and when the physical memory fills up, it does not load the thread into the ipt.  We already know which page the currentThread needs to take up, we don't need to look for a new, empty page.
- 	//Load page into IPT
-	int processID = currentThread->getID();
-	//int * threadPointer = (int *) currentThread;
-	bool loadedIPT = FALSE;
-	//Thread * testThread = (Thread *) threadPointer;
-	for (int i = 0; i < NumPhysPages - 1; i++) {
-		//printf("Iterator - %d\n", i);
-		if ( ipt[i] == NULL) {
-			ipt[i] = currentThread;
-			loadedIPT = TRUE;
-			break;
-		}
-	}
-
-	if (loadedIPT)
-		printf("Process %i request VPN %i.\n", processID, virtualPageNum );
-	else 
-		ASSERT(false);
-*/
-}
-//End code changes by Ben Matkin
-
-
-// Begin code changes by Chet Ransonet
-
-// called in the case of a PageFaultException
-// loads code and data into a free physical page if there is one
-
-
-
-void AddrSpace::loadPage(int badVAddr)
-{	
-	printf("\nPage Fault: \n");
-
-	stats->numPageFaults++;
-
-	int virtualPage = badVAddr / PageSize, physPage;
-	unsigned int pageStart, offset, size; //modifiers for copying data into memory
-	bool lock = false;
-	
-   	//loadThreadIntoIPT(virtualPage);
-
-	printf("Page availability before adding the process: \n");
-	memMap->Print();	
-
-	physPage = memMap->Find(); // select a physical page not in use
-	//printf("Phys page initial = %d\n", physPage);
-	if (physPage == -1) //if no page was found, swap out a page
-	{
-		if(swapChoice == 1) // FIFO
-		{
-			//Begin code changes by Ben Matkin and Stephen Mader
-			printf("Out of memory, swapping pages using FIFO page replacement\n");
-			physPage = (int)pageList->Remove(); // Take one page off front of list
-			printf("physPage = %d \n", physPage);
-			//End code changes by Ben Matkin and Stephen Mader
-			
-		}
-		else if (swapChoice == 2) // Random
-		{
-			printf("Out of memory, swapping pages using Random page replacement\n");
-			physPage = Random() % 32;
-			//printf("physPage = %d \n", physPage);	
-		}
-		else // default
-		{
-			printf("Out of memory, virtual memory scheme not selected, exiting...\n");
-			ASSERT(false); 
-		}
-		
-		
-	
-		if(!ipt[physPage]->space->Swapout(physPage))
-			return;
-			
-		printf("Process %i request VPN %i.\n", currentThread->getID(), virtualPage);
-		
-	}
-		if(swapChoice == 1)
-		{
-			pageList->Append((int *) physPage); // Store virtual page, though mainly just maintaining index cue
-			lock = true;
-			pageLock[physPage]->P();
-		}
-	ipt[physPage] = currentThread;
-		
-	//printf("Assigning frame %i \n", physPage);
-	pageTable[virtualPage].physicalPage = physPage;
-	
-	printf("Page availability after adding the process: \n");
-	memMap->Print();
-	
-	//debugging
-	printf("Page that faulted: %i\nPhysical page selected: %i\n", virtualPage, physPage);
-	
-	if(!swapped[virtualPage])
-	{
-		bzero(machine->mainMemory + PageSize * physPage, PageSize);
-		
-		pageStart = 0; //starting place to load in code/data
-		offset = 0;	//modifies the location we're reading from
-
-		// code segment
-		if (noffH.code.size > 0)
-		{
-			if (noffH.code.virtualAddr <= virtualPage * PageSize)
-				offset = virtualPage * PageSize - noffH.code.virtualAddr;
-			else 
-				pageStart = noffH.code.virtualAddr - virtualPage * PageSize;		
-			
-			// set size of data to be copied
-			size = PageSize - pageStart;
-			if (noffH.code.virtualAddr + noffH.code.size < (virtualPage+1) * PageSize)
-				size -= (virtualPage) * PageSize - (noffH.code.virtualAddr + noffH.code.size);
-				
-			// copy data to memory	
-			file->ReadAt(&(machine->mainMemory[PageSize * physPage + pageStart]),
-			 	size, 
-			 	noffH.code.inFileAddr + offset);
-			 		 
-			//file->ReadAt(&data + pageStart,size,noffH.code.inFileAddr + offset);
-			 
-		}
-		
-		pageStart = 0;
-		offset = 0;
-		
-		// initData segment
-		if (noffH.initData.size > 0)
-		{
-			if (noffH.initData.virtualAddr <= virtualPage * PageSize)
-				offset = virtualPage * PageSize - noffH.initData.virtualAddr;
-			else
-				pageStart = noffH.initData.virtualAddr - virtualPage * PageSize;
-			
-			//set size of data to be copied
-			size = PageSize - pageStart;
-			if (noffH.initData.virtualAddr + noffH.initData.size < (virtualPage+1) * PageSize)
-				size -= (virtualPage) * PageSize - (noffH.initData.virtualAddr + noffH.initData.size);
-				
-			//copy data into memory
-			file->ReadAt(&(machine->mainMemory[PageSize * physPage+pageStart]) , 
-				size, 
-				noffH.initData.inFileAddr + offset);
-			//file->ReadAt(data, size, noffH.initData.inFileAddr + offset);
-		}
-		
-		char * data = machine->mainMemory + physPage * PageSize;
-		swapFile->WriteAt(data, PageSize, virtualPage * PageSize);
-
-		pageTable[virtualPage].valid = true;
-		pageTable[virtualPage].dirty = false;
-		
-		
-	}
-	else
-		Swapin(virtualPage, physPage);
-	if(lock)
-	{
-		pageLock[physPage]->V();
-		lock = false;
-	}
-    return;
-}
-
-// End code changes by Chet Ransonet
 
 //----------------------------------------------------------------------
 // AddrSpace::~AddrSpace
@@ -359,26 +173,15 @@ AddrSpace::~AddrSpace()
 {
 	// Only clear the memory if it was set to begin with
 	// which in turn only happens after space is set to true
-
 	if(space)
 	{
-		for(unsigned int i = 0; i < numPages; i++)	
-		{
-			if(pageTable[i].physicalPage != -1)
-				memMap->Clear(pageTable[i].physicalPage);
-		}
+		for(int i = startPage; i < numPages + startPage; i++)	// We need an offset of startPage + numPages for clearing.
+			memMap->Clear(i);
+
 		delete pageTable;
-		
+
 		memMap->Print();
 	}
-	
-	delete file;
-	
-	
-	//Begin code changes by Ryan Mazerole
-	DestroySwapFile();
-	//End code changes by Ryan Mazerole
-	// End code changes by Chet Ransonet
 }
 
 //----------------------------------------------------------------------
@@ -437,81 +240,3 @@ void AddrSpace::RestoreState()
     machine->pageTable = pageTable;
     machine->pageTableSize = numPages;
 }
-
-//Begin code changes by Ryan Mazerole
-void AddrSpace::Swap(int pageNum){
-
-	sprintf(swapfilename, "%d.swap", currentThread->getID());
-
-	fileSystem->Create(swapfilename, pageNum * PageSize);
-	swapFile = fileSystem->Open(swapfilename);
-	
-}
-
-void AddrSpace::DestroySwapFile(){
-	
-	delete swapFile;
-	fileSystem->Remove(swapfilename);
-}
-
-bool AddrSpace::Swapin(int page, int frame)
-{
-		
-	ASSERT(page >= 0);
-	ASSERT(frame >= 0 && frame < NumPhysPages);
-
-	//AddrSpace * space = currentThread->space;
-
-	int characterRead;
-	char *position = machine->mainMemory + frame * PageSize;
-
-	characterRead = swapFile->ReadAt(position, PageSize, page * PageSize);
-
-	bool check = (characterRead == PageSize);
-
-	if(check){
-		setValidity(page, true);
-		setDirty(page, false);
-	}
-	
-	swapped[page] = true;
-
-	return check;
-
-}
-
-bool AddrSpace::Swapout(int frame)
-{
-	int virtPage = -1;
-	for(unsigned int i=0; i < numPages; i++)
-	{
-		if(pageTable[i].physicalPage == frame)
-		{
-			virtPage = i; //printf("virtPage = %i\n", virtPage);
-			break;
-		}
-	}
-	if(virtPage == -1)
-	{
-		printf("\n\nERROR: Page could not be swapped!\n\n\n");
-		ASSERT(false);
-		//return false;
-	}
-
-	if(pageTable[virtPage].dirty)
-	{
-		char * data = machine->mainMemory + frame * PageSize;
-		swapFile->WriteAt(data, PageSize, virtPage * PageSize);
-	}
-	
-	pageTable[virtPage].valid = false;
-	pageTable[virtPage].dirty = false;
-	pageTable[virtPage].physicalPage = -1;
-	
-	swapped[virtPage] = false;
-	
-	//savePageTableEntry(pageTable[frame], pageTable[frame].virtualPage);
-
-	return true;
-}
-//End code changes by Ryan Mazerole

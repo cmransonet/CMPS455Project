@@ -15,7 +15,6 @@
 int
 main()
 {
-    Join(Exec("../test/sort"));
-	Exit(0);
+    Halt();
     /* not reached */
 }

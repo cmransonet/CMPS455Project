@@ -28,6 +28,7 @@ class ListElement {
    public:
      ListElement(void *itemPtr, int sortKey);	// initialize a list element
 
+     ListElement *next;		// next element on list, 
 				// NULL if this is the last
      int key;		    	// priority, for a sorted list
      void *item; 	    	// pointer to item on the list
@@ -50,12 +51,13 @@ class List {
 
     void Mapcar(VoidFunctionPtr func);	// Apply "func" to every element 
 					// on the list
-    bool IsEmpty();		// is the list empty?    
+    bool IsEmpty();		// is the list empty? 
+    
 
     // Routines to put/get items on/off list in order (sorted by key)
     void SortedInsert(void *item, int sortKey);	// Put item into list
     void *SortedRemove(int *keyPtr); 	  	// Remove first item from list
-	int getSize();
+	int getSize(){return size;}
 
   private:
     ListElement *first;  	// Head of the list, NULL if list is empty

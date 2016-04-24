@@ -18,18 +18,8 @@ Interrupt *interrupt;			// interrupt status
 Statistics *stats;			// performance metrics
 Timer *timer;				// the hardware timer device,
 					// for invoking context switches
-
-//Begin code changes by Chet Ransonet
-Semaphore ** pageLock;
-//End code changes by Chet Ransonet
-
-//Begin code changes by Ben Matkin
-Thread * ipt[NumPhysPages];
-List * pageList = new List();
-//End code changes by Ben Matkin
 int threadChoice;
 int memChoice;
-int swapChoice;
 bool pageFlag;
 
 BitMap * memMap;
@@ -131,18 +121,7 @@ Initialize(int argc, char **argv)
 	    else
 			threadChoice = atoi(*(argv+1));
 	    argCount = 2;
-	} 
-	//Begin code changes by Robert Knott
-	else if (!strcmp(*argv, "-V")) {
-		if (*(argv+1) == NULL)
-			swapChoice = 0;
-		else
-			swapChoice = atoi(*(argv+1));
-		//printf("swapChoice = %i\n", swapChoice);
-		argCount = 2;
-	}
-	//End code changes by Robert Knott
-	else if (!strcmp(*argv, "-M")) {
+	} else if (!strcmp(*argv, "-M")) {
 	    if(*(argv+1) == NULL)
 			memChoice = 1;
 	    else
